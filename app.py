@@ -1628,41 +1628,43 @@ if modo == "Por parcela":
     municipio_sel = st.selectbox("Municipio", options=municipios_de_provincia)
     
     carpeta_municipio = shp_urls[provincia_sel][municipio_sel]
-
     gdf = cargar_shapefile_clm(provincia_sel, carpeta_municipio)     
     
-if gdf is not None:
-    masa_sel = st.selectbox("Polígono", options=sorted(gdf["MASA"].astype(str).unique()))
-    opciones_parcelas = sorted(gdf[gdf["MASA"] == masa_sel]["PARCELA"].astype(str).unique())
-    parcela_sel = st.selectbox("Parcela", options=opciones_parcelas)
-    
-    # Filtrar la fila correcta y asignar a 'parcela' de forma segura
-    parcela_row = gdf[(gdf["MASA"] == masa_sel) & (gdf["PARCELA"] == parcela_sel)]
-    
-    if not parcela_row.empty:
-        parcela = parcela_row.iloc[0]  # ahora sí es una fila con geometría
+    if gdf is not None and not gdf.empty:
+        # Seleccionamos polígono
+        masa_sel = st.selectbox("Polígono", options=sorted(gdf["MASA"].astype(str).unique()))
         
-        if parcela.geometry.geom_type in ['Polygon', 'MultiPolygon']:
-            centroide = parcela.geometry.centroid
-            x = centroide.x
-            y = centroide.y         
-                    
-            st.success("Parcela cargada correctamente.")
-            st.write(f"Municipio: {municipio_sel}")
-            st.write(f"Polígono: {masa_sel}")
-            st.write(f"Parcela: {parcela_sel}")
+        # Filtramos parcelas del polígono seleccionado
+        parcelas_del_poligono = gdf[gdf["MASA"] == masa_sel]
+        opciones_parcelas = sorted(parcelas_del_poligono["PARCELA"].astype(str).unique())
+        parcela_sel = st.selectbox("Parcela", options=opciones_parcelas)
+        
+        # === OBTENEMOS LA GEOMETRÍA REAL DE LA PARCELA SELECCIONADA ===
+        fila_parcela = parcelas_del_poligono[parcelas_del_poligono["PARCELA"] == parcela_sel]
+        
+        if not fila_parcela.empty:
+            parcela = fila_parcela.iloc[0]                    # ← fila completa (GeoSeries)
+            if parcela.geometry is not None and parcela.geometry.type in ['Polygon', 'MultiPolygon']:
+                centroide = parcela.geometry.centroid
+                x = centroide.x
+                y = centroide.y
+                st.success("Parcela cargada correctamente.")
+                st.write(f"Municipio: {municipio_sel}")
+                st.write(f"Polígono: {masa_sel}")
+                st.write(f"Parcela: {parcela_sel}")
+            else:
+                st.error("La geometría de la parcela no es válida.")
+                parcela = None
+                x = y = 0.0
         else:
-            st.error("La geometría seleccionada no es un polígono válido.")
+            st.error("No se encontró la parcela seleccionada.")
             parcela = None
             x = y = 0.0
     else:
-        st.error("No se encontró la combinación Polígono/Parcela seleccionada.")
+        st.error(f"No se pudo cargar el shapefile del municipio {municipio_sel}")
         parcela = None
         x = y = 0.0
-else:
-    st.error(f"No se pudo cargar el shapefile para el municipio: {municipio_sel}")
-    parcela = None
-    x = y = 0.0
+        gdf = None
 
 with st.form("formulario"):
     if modo == "Por coordenadas":
@@ -1717,9 +1719,9 @@ if submitted:
             # === 4. DEFINIR query_geom (UNA VEZ) ===
             if modo == "Por parcela":
                 if parcela is not None and hasattr(parcela, 'geometry') and parcela.geometry is not None:
-                    query_geom = parcela.geometry
+                    query_geom = parcela.geometry          # ← ES UN POLÍGONO, NO HAY .iloc[0]
                 else:
-                    st.error("Error: no se pudo obtener la geometría de la parcela.")
+                    st.error("Error crítico: no se pudo obtener la geometría de la parcela.")
                     st.stop()
             else:
                 query_geom = Point(x, y)
@@ -1806,11 +1808,7 @@ if submitted:
 
             # === 9. GENERAR MAPA ===
             parcela_gdf_para_mapa = parcela if (modo == "Por parcela" and parcela is not None) else None
-            mapa_html, afecciones_lista = crear_mapa(
-                lon, lat, 
-                afecciones, 
-                parcela_gdf=parcela_gdf_para_mapa
-            )
+            mapa_html, afecciones_lista = crear_mapa(lon, lat, afecciones, parcela_gdf=parcela_gdf_para_mapa)
             
             if mapa_html:
                 st.session_state['mapa_html'] = mapa_html
