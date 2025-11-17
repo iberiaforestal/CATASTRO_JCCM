@@ -122,53 +122,54 @@ shp_urls = {
  }
 
 # Función para cargar shapefiles desde GitHub
-@st.cache_data
-def cargar_shapefile_desde_github(base_name):
-    base_url = "https://raw.githubusercontent.com/iberiaforestal/CATASTRO_JCCM/main/CATASTRO/"
+@st.cache_data(ttl=3600)
+def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
+    base_url = "https://raw.githubusercontent.com/iberiaforestal/CATASTRO_JCCM/master/CATASTRO/"
     exts = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
     
     with tempfile.TemporaryDirectory() as tmpdir:
         local_paths = {}
         for ext in exts:
-            filename = base_name + ext
-            url = base_url + filename
+            filename = f"PARCELA{ext}"
+            url = f"{base_url}{provincia}/{nombre_carpeta_municipio}/{filename}"
+            
             try:
-                response = requests.get(url, timeout=100)
-                response.raise_for_status()
+                r = requests.get(url, timeout=60)
+                r.raise_for_status()
             except requests.exceptions.RequestException as e:
-                st.error(f"Error al descargar {url}: {str(e)}")
+                st.warning(f"No encontrado: {provincia}/{nombre_carpeta_municipio} → {filename}")
                 return None
             
-            local_path = os.path.join(tmpdir, filename)
-            with open(local_path, "wb") as f:
-                f.write(response.content)
-            local_paths[ext] = local_path
+            path = os.path.join(tmpdir, filename)
+            with open(path, "wb") as f:
+                f.write(r.content)
+            local_paths[ext] = path
         
-        shp_path = local_paths[".shp"]
         try:
-            gdf = gpd.read_file(shp_path)
+            gdf = gpd.read_file(local_paths[".shp"])
+            gdf = gdf.to_crs(epsg=25830)  # Aseguramos ETRS89 UTM zona 30
             return gdf
         except Exception as e:
-            st.error(f"Error al leer shapefile {shp_path}: {str(e)}")
+            st.error(f"Error leyendo shapefile de {nombre_carpeta_municipio}: {e}")
             return None
+            
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
 def encontrar_municipio_poligono_parcela(x, y):
-    try:
-        punto = Point(x, y)
-        for municipio, archivo_base in shp_urls.items():
-            gdf = cargar_shapefile_desde_github(archivo_base)
+    punto = Point(float(x), float(y))
+    
+    for provincia, municipios in shp_urls.items():
+        for nombre_mostrar, nombre_carpeta in municipios.items():
+            gdf = cargar_shapefile_clm(provincia, nombre_carpeta)
             if gdf is None:
                 continue
-            seleccion = gdf[gdf.contains(punto)]
-            if not seleccion.empty:
-                parcela_gdf = seleccion.iloc[[0]]
-                masa = parcela_gdf["MASA"].iloc[0]
-                parcela = parcela_gdf["PARCELA"].iloc[0]
-                return municipio, masa, parcela, parcela_gdf
-        return "N/A", "N/A", "N/A", None
-    except Exception as e:
-        st.error(f"Error al buscar parcela: {str(e)}")
-        return "N/A", "N/A", "N/A", None
+                
+            if gdf.contains(punto).any():
+                fila = gdf[gdf.contains(punto)].iloc[0]
+                masa = fila.get("MASA", "N/A")
+                parcela = fila.get("PARCELA", "N/A")
+                return nombre_mostrar, masa, parcela, gdf[gdf.contains(punto)]
+    
+    return "Fuera de Castilla-La Mancha", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
 def transformar_coordenadas(x, y):
