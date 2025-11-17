@@ -1294,6 +1294,19 @@ def generar_pdf(datos, x, y, filename):
     else:
         st.success("Logo local cargado correctamente")
 
+    # === INSERTAR MAPA ESTÁTICO EN EL PDF ===
+        mapa_path = st.session_state.get('mapa_imagen_path')
+        if mapa_path and os.path.exists(mapa_path):
+            pdf.ln(10)
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.cell(0, 10, "Ubicación de la parcela:", ln=1)
+            pdf.image(mapa_path, x=10, w=190, h=130)
+            pdf.ln(135)
+        else:
+            pdf.ln(10)
+            pdf.cell(0, 10, "Mapa no disponible", ln=1)
+            pdf.ln(10)
+
     # === RECUPERAR query_geom ===
     query_geom = st.session_state.get('query_geom')
     if query_geom is None:
@@ -2711,6 +2724,14 @@ if submitted:
                 with open(mapa_html, "r", encoding="utf-8") as f:
                     html(f.read(), height=600)
 
+            # === GENERAR MAPA ESTÁTICO PARA EL PDF (OBLIGATORIO) ===
+            st.info("Generando mapa estático para el PDF...")
+            mapa_estatico_path = generar_imagen_estatica_mapa(x, y, zoom=17)
+            if mapa_estatico_path:
+                st.success("Mapa estático listo para el PDF")
+            else:
+                st.warning("No se pudo generar el mapa estático (aparecerá sin mapa en PDF)")
+                
             # === 10. GENERAR PDF (AL FINAL, CUANDO `datos` EXISTE) ===
             pdf_filename = f"informe_{uuid.uuid4().hex[:8]}.pdf"
             try:
