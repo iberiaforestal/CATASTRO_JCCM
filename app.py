@@ -21,6 +21,16 @@ from urllib3.util.retry import Retry
 import shutil
 from PIL import Image
 
+# === INICIALIZAR SESSION_STATE (EVITA KeyError AL CARGAR LA APP) ===
+if 'mapa_html' not in st.session_state:
+    st.session_state['mapa_html'] = None
+if 'pdf_file' not in st.session_state:
+    st.session_state['pdf_file'] = None
+if 'mapa_imagen_path' not in st.session_state:
+    st.session_state['mapa_imagen_path'] = None
+if 'afecciones' not in st.session_state:
+    st.session_state['afecciones'] = []
+
 # Sesión segura con reintentos
 session = requests.Session()
 retry = Retry(total=3, backoff_factor=2, status_forcelist=[500, 502, 503, 504, 429])
