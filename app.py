@@ -249,16 +249,23 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     m = folium.Map(location=[lat, lon], zoom_start=16)
     folium.Marker([lat, lon], popup=f"Coordenadas transformadas: {lon}, {lat}").add_to(m)
 
-    if parcela_gdf is not None and not parcela_gdf.empty:
+    if parcela_gdf is not None:
         try:
+            # Si es una fila (GeoSeries) → convertir a GeoDataFrame
+            if hasattr(parcela_gdf, 'geometry') and not hasattr(parcela_gdf, 'to_crs'):
+                parcela_gdf = gpd.GeoDataFrame([parcela_gdf], crs="EPSG:25830")
+            
+            # Ahora sí podemos usar to_crs de forma segura
             parcela_4326 = parcela_gdf.to_crs("EPSG:4326")
+            
             folium.GeoJson(
                 parcela_4326.to_json(),
                 name="Parcela",
-                style_function=lambda x: {'fillColor': 'transparent', 'color': 'blue', 'weight': 2, 'dashArray': '5, 5'}
+                style_function=lambda x: {'fillColor': 'transparent', 'color': 'blue', 'weight': 3, 'dashArray': '5, 5'}
             ).add_to(m)
+            
         except Exception as e:
-            st.error(f"Error al añadir la parcela al mapa: {str(e)}")
+            st.warning(f"No se pudo dibujar la parcela en el mapa: {str(e)}")
 
     wms_layers = [
         ("Red Natura 2000", "SIG_LUP_SITES_CARM:RN2000"),
