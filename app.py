@@ -1,4 +1,4 @@
- import streamlit as st
+import streamlit as st
 import folium
 from streamlit.components.v1 import html
 from fpdf import FPDF
