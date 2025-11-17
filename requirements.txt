@@ -1,0 +1,17 @@
+streamlit>=1.39.0
+folium>=0.17.0
+geopandas>=1.0.1
+fpdf>=1.7.2
+pyproj>=3.7.0
+requests>=2.32.3
+lxml>=5.3.0
+shapely>=2.0.6
+python-docx>=1.1.2
+branca>=0.8.0
+staticmap>=0.5.6
+Pillow>=10.4.0
+python-dotenv>=1.0.1
+yagmail>=0.15.293
+plotly>=5.18.0
+pandas>=2.2.0
+zeep==4.3.2
