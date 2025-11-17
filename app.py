@@ -998,9 +998,9 @@ def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
             return None
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
-def encontrar_municipio_poligono_parcela(x_25830, y_25830):
-    # Tolerancia de 10 cm → suficiente para cualquier error de redondeo
-    punto_buffer = Point(x_25830, y_25830).buffer(0.1)   # 10 cm
+def encontrar_municipio_poligono_parcela(x, y):
+
+    punto_buffer = Point(x, y).buffer(0.15)  # 15 cm de tolerancia (más que suficiente)
     
     for provincia, municipios in shp_urls.items():
         for municipio, carpeta in municipios.items():
@@ -1008,20 +1008,18 @@ def encontrar_municipio_poligono_parcela(x_25830, y_25830):
             if gdf is None or gdf.empty:
                 continue
                 
-            # Forzamos CRS 25830 por si algún shp viene raro
+            # Forzamos CRS por si acaso
             if gdf.crs != "EPSG:25830":
                 gdf = gdf.to_crs("EPSG:25830")
-            
-            # intersects + buffer = nunca falla
-            coincidencias = gdf[gdf.geometry.intersects(punto_buffer)]
-            if not coincidencias.empty:
-                fila = coincidencias.iloc[0]
-                return (
-                    municipio,
-                    str(fila["MASA"]),
-                    str(fila["PARCELA"]),
-                    coincidencias
-                )
+                
+            # Buscamos intersección con buffer
+            mask = gdf.geometry.intersects(punto_buffer)
+            if mask.any():
+                fila = gdf[mask].iloc[0]
+                masa = str(fila["MASA"]) if "MASA" in fila else "N/A"
+                parc = str(fila["PARCELA"]) if "PARCELA" in fila else "N/A"
+                return municipio, masa, parc, gdf[mask]
+                
     return "N/A", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
