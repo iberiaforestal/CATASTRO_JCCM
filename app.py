@@ -1712,7 +1712,7 @@ if submitted:
         # === 3. TRANSFORMAR COORDENADAS ===
         lon, lat = transformar_coordenadas(x, y)
         if lon is None or lat is None:
-            st.error("No se pudo generar el informe debido a coordenadas inválidas.")
+            st.error("No se pudo generar el informe debido a coordenadas inválidas.") 
         else:
             # === 4. DEFINIR query_geom (UNA VEZ) ===
             if modo == "Por parcela":
