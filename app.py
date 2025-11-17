@@ -998,26 +998,24 @@ def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
             return None
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
-def encontrar_municipio_poligono_parcela(x, y):
-    point = Point(x, y)
+def encontrar_municipio_poligono_parcela(x_ed50, y_ed50):
+    # Transformar de ED50 UTM 30N (23030) → ETRS89 UTM 30N (25830) para crear el punto
+    transformer = Transformer.from_crs("EPSG:23030", "EPSG:25830", always_xy=True)
+    x, y = transformer.transform(x_ed50, y_ed50)
+    
+    point = Point(x, y)  # Ahora sí está en el mismo CRS que los WFS oficiales
+    
     for provincia, municipios in shp_urls.items():
-        print(f"Buscando en provincia: {provincia}")  # ← Log
         for municipio, carpeta in municipios.items():
-            print(f"  Cargando shapefile para {municipio} ({carpeta})...")  # ← Log
             gdf = cargar_shapefile_clm(provincia, carpeta)
             if gdf is not None and not gdf.empty:
-                print(f"    Shapefile cargado: {len(gdf)} parcelas. CRS: {gdf.crs}")  # ← Verifica CRS
-                parcela_gdf = gdf[gdf.geometry.contains(point)]
-                if not parcela_gdf.empty:
-                    masa = parcela_gdf.iloc[0]["MASA"]
-                    parcela = parcela_gdf.iloc[0]["PARCELA"]
-                    print(f"    Encontrado: Municipio={municipio}, Polígono={masa}, Parcela={parcela}")  # ← Log éxito
-                    return municipio, masa, parcela, parcela_gdf
-                else:
-                    print(f"    Punto no encontrado en {municipio}")  # ← Log fallo
-            else:
-                print(f"    Error cargando shapefile de {municipio}")  # ← Log error
-    print("No se encontró ninguna parcela.")  # ← Log final
+                # Forzar que el shapefile también esté en 25830 (por si acaso)
+                if gdf.crs != "EPSG:25830":
+                    gdf = gdf.to_crs("EPSG:25830")
+                
+                if gdf.geometry.contains(point).any():
+                    fila = gdf[gdf.geometry.contains(point)].iloc[0]
+                    return municipio, str(fila["MASA"]), str(fila["PARCELA"]), gdf[gdf.geometry.contains(point)]
     return "N/A", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
