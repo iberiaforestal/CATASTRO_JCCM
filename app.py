@@ -2564,7 +2564,7 @@ if not fila_parcela.empty:
         x = centroide.x
         y = centroide.y
         st.success(f"Parcela cargada → X: {x:.2f}, Y: {y:.2f}")
-    else HAY QUE AJUSTAR
+    else 
         x = y = 0.0
 
 with st.form("formulario"):
