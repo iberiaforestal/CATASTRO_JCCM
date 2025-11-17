@@ -971,44 +971,42 @@ shp_urls = {
 def cargar_shapefile_clm(provincia, municipio):
     base_url = f"https://raw.githubusercontent.com/iberiaforestal/shp_clm/main/{provincia}/{municipio}"
     with tempfile.TemporaryDirectory() as tmpdirname:
-        archivos_descargados = []
         for ext in ['.shp', '.shx', '.dbf', '.prj', '.cpg']:
             url = f"{base_url}{ext}"
-            archivo_local = os.path.join(tmpdirname, f"{municipio}{ext}")
+            archivo = os.path.join(tmpdirname, f"{municipio}{ext}")
             try:
-                response = session.get(url, timeout=20)
-                if response.status_code == 200:
-                    with open(archivo_local, 'wb') as f:
-                        f.write(response.content)
-                    archivos_descargados.append(archivo_local)
+                r = session.get(url, timeout=15)
+                if r.status_code == 200:
+                    with open(archivo, 'wb') as f:
+                        f.write(r.content)
             except:
-                pass
-        
-        if not archivos_descargados:
-            st.error(f"No se pudieron descargar los archivos para {municipio}")
+                pass  # si falla uno, seguimos (algunos .cpg no existen)
+
+        shp_path = os.path.join(tmpdirname, f"{municipio}.shp")
+        if not os.path.exists(shp_path):
+            st.error(f"No se encontró el .shp de {municipio}")
             return None
 
         try:
-            # Leemos SIN forzar CRS
-            gdf = gpd.read_file(os.path.join(tmpdirname, f"{municipio}.shp"))
-            
-            # Si no tiene CRS (raro), lo ponemos a 25830
+            # 1. Leemos dejando que geopandas coja el CRS del .prj
+            gdf = gpd.read_file(shp_path)
+
+            # 2. Si no tiene CRS (muy raro), ponemos 25830
             if gdf.crs is None:
-                st.warning(f"{municipio} no tiene .prj → se asume EPSG:25830")
                 gdf.set_crs("EPSG:25830", inplace=True)
-            
-            # SI el CRS original es ED50 (23030), lo convertimos a ETRS89 (25830)
-            if gdf.crs.to_epsg() == 23030:
-                st.info(f"{municipio} estaba en ED50 (23030) → convirtiendo a ETRS89 (25830)")
+
+            # 3. Solo convertimos SI el CRS original es ED50 (23030)
+            if gdf.crs and gdf.crs.to_epsg() == 23030:
+                st.info(f"Convirtiendo {municipio} de ED50 → ETRS89 (25830)")
                 gdf = gdf.to_crs("EPSG:25830")
-            
-            # FORZAMOS siempre al final a 25830 (el que usa el resto del código)
-            gdf = gdf.to_crs("EPSG:25830")
-            
+            else:
+                # Si ya está en 25830 o en cualquier otro (raro), lo dejamos tal cual y luego lo pasamos a 25830 por seguridad
+                gdf = gdf.to_crs("EPSG:25830")
+
             return gdf
-            
+
         except Exception as e:
-            st.error(f"Error leyendo shapefile de {municipio}: {str(e)}")
+            st.error(f"Error grave cargando {municipio}: {str(e)}")
             return None
 
 def obtener_zona_utm(lon):
@@ -2553,19 +2551,22 @@ if modo == "Por parcela":
         parcela_sel = st.selectbox("Parcela", options=opciones_parcelas)
         
         # === OBTENEMOS LA GEOMETRÍA REAL DE LA PARCELA SELECCIONADA ===
-        fila_parcela = parcelas_del_poligono[parcelas_del_poligono["PARCELA"] == parcela_sel]
+            fila_parcela = parcelas_del_poligono[parcelas_del_poligono["PARCELA"] == parcela_sel]
         
-if not fila_parcela.empty:
-    parcela = fila_parcela.iloc[0]
-    if parcela.geometry is not None:
-        # Nos aseguramos de que esté en 25830
-        geom_25830 = gpd.GeoSeries([parcela.geometry], crs=gdf.crs).to_crs("EPSG:25830").iloc[0]
-        centroide = geom_25830.centroid
-        x = centroide.x
-        y = centroide.y
-        st.success(f"Parcela cargada → X: {x:.2f}, Y: {y:.2f}")
-    else 
-        x = y = 0.0
+        if not fila_parcela.empty:
+            parcela = fila_parcela.iloc[0]
+            if parcela.geometry is not None:
+                # Ahora gdf YA está garantizado en EPSG:25830 gracias a la función cargar_shapefile_clm corregida
+                centroide = parcela.geometry.centroid
+                x = centroide.x
+                y = centroide.y
+                st.success(f"Parcela cargada → X: {x:.2f} | Y: {y:.2f}")
+            else:
+                x = y = 0.0
+                st.error("La parcela seleccionada no tiene geometría válida")
+        else:
+            x = y = 0.0
+            st.error("No se encontró la parcela seleccionada")
 
 with st.form("formulario"):
     if modo == "Por coordenadas":
