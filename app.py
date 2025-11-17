@@ -1677,12 +1677,20 @@ with st.form("formulario"):
     if modo == "Por coordenadas":
         x = st.number_input("Coordenada X (ETRS89)", format="%.2f", help="Introduce coordenadas en metros, sistema ETRS89 / UTM zona 30")
         y = st.number_input("Coordenada Y (ETRS89)", format="%.2f")
-        if x == 0.0 and y == 0.0:
-            provincia_sel, municipio_sel, masa_sel, parcela_sel, parcela = encontrar_municipio_poligono_parcela(x, y)
-            if provincia_sel != "N/A":
-                st.success(f"Parcela encontrada: Provincia: {municipio_sel}, Municipio: {municipio_sel}, Polígono: {masa_sel}, Parcela: {parcela_sel}")
+
+        # Solo intentamos buscar la referencia catastral si el usuario escribe algo distinto de 0,0
+        if x != 0.0 or y != 0.0:
+            municipio_encontrado, masa_sel, parcela_sel, parcela_gdf = encontrar_municipio_poligono_parcela(x, y)
+            
+            if municipio_encontrado != "N/A":
+                municipio_sel = municipio_encontrado
+                st.success(f"Referencia catastral detectada → Municipio: {municipio_sel} | Polígono: {masa_sel} | Parcela: {parcela_sel}")
+                # Opcional: guardamos la fila para usarla luego si queremos
+                parcela = parcela_gdf.iloc[0] if parcela_gdf is not None else None
             else:
-                st.warning("No se encontró una parcela para las coordenadas proporcionadas.")
+                st.info("No se encontró ninguna parcela catastral en ese punto exacto.")
+        else:
+            st.info("Introduce coordenadas válidas para comenzar.")
     else:
         st.info(f"Coordenadas obtenidas del centroide de la parcela: X = {x}, Y = {y}")
         
