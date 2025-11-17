@@ -1805,15 +1805,23 @@ if submitted:
             st.write(f"Parcela seleccionada: {parcela_sel}")
 
             # === 9. GENERAR MAPA ===
-            mapa_html, afecciones_lista = crear_mapa(lon, lat, afecciones, parcela_gdf=parcela)
+            parcela_gdf_para_mapa = parcela if (modo == "Por parcela" and parcela is not None) else None
+            mapa_html, afecciones_lista = crear_mapa(
+                lon, lat, 
+                afecciones, 
+                parcela_gdf=parcela_gdf_para_mapa
+            )
+            
             if mapa_html:
                 st.session_state['mapa_html'] = mapa_html
                 st.session_state['afecciones'] = afecciones_lista
+                
                 st.subheader("Resultado de las afecciones")
                 for afeccion in afecciones_lista:
                     st.write(f"• {afeccion}")
-                with open(mapa_html, 'r') as f:
-                    html(f.read(), height=500)
+                    
+                with open(mapa_html, "r", encoding="utf-8") as f:
+                    html(f.read(), height=600)
 
             # === 10. GENERAR PDF (AL FINAL, CUANDO `datos` EXISTE) ===
             pdf_filename = f"informe_{uuid.uuid4().hex[:8]}.pdf"
