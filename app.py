@@ -1183,24 +1183,42 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
 
     return mapa_html, afecciones
 
-# Función para generar la imagen estática del mapa usando py-staticmaps
-def generar_imagen_estatica_mapa(x, y, zoom=16, size=(800, 600)):
+# === GENERAR IMAGEN ESTÁTICA DEL MAPA PARA EL PDF (100% FUNCIONAL) ===
+def generar_imagen_estatica_mapa(x, y, zoom=17, size=(800, 600)):
+    from staticmap import StaticMap, CircleMarker
+    
+    # Transformar coordenadas (ya tienes la función corregida con provincia)
     lon, lat = transformar_coordenadas(x, y, provincia_sel=provincia_sel)
     if lon is None or lat is None:
+        st.error("No se pudieron transformar las coordenadas para el mapa estático.")
         return None
-    
+
     try:
-        m = StaticMap(size[0], size[1], url_template='http://a.tile.openstreetmap.org/{z}/{x}/{y}.png')
-        marker = CircleMarker((lon, lat), 'red', 12)
+        # Crear mapa estático con OpenStreetMap
+        m = StaticMap(width=size[0], height=size[1], url_template="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png")
+        
+        # Marcador grande y visible
+        marker = CircleMarker((lon, lat), color="#FF0000", width=14)
         m.add_marker(marker)
         
+        # Opcional: círculo de fondo para más contraste
+        from staticmap import CircleMarker as Circle
+        m.add_marker(Circle((lon, lat), color="#FF000033", width=40))  # fondo semitransparente
+
+        # Renderizar y guardar
+        image = m.render(zoom=zoom, center=(lon, lat))
+        
+        # Guardar en carpeta temporal
         temp_dir = tempfile.mkdtemp()
-        output_path = os.path.join(temp_dir, "mapa.png")
-        image = m.render(zoom=zoom)
+        output_path = os.path.join(temp_dir, f"mapa_estatico_{uuid.uuid4().hex[:8]}.png")
         image.save(output_path)
+        
+        st.session_state['mapa_imagen_path'] = output_path  # Guardamos la ruta
+        st.success("Imagen estática del mapa generada correctamente")
         return output_path
+
     except Exception as e:
-        st.error(f"Error al generar la imagen estática del mapa: {str(e)}")
+        st.error(f"Error generando mapa estático: {e}")
         return None
 
 # Clase personalizada para el PDF con encabezado y pie de página
@@ -2564,6 +2582,8 @@ if 'pdf_file' not in st.session_state:
     st.session_state['pdf_file'] = None
 if 'afecciones' not in st.session_state:
     st.session_state['afecciones'] = []
+if 'mapa_imagen_path' not in st.session_state:
+    st.session_state['mapa_imagen_path'] = None
 
 if submitted:
 # === 1. LIMPIAR ARCHIVOS DE BÚSQUEDAS ANTERIORES ===
