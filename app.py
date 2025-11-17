@@ -2753,15 +2753,37 @@ if submitted:
             # === 11. LIMPIAR DATOS TEMPORALES ===
             st.session_state.pop('query_geom', None)
             st.session_state.pop('wfs_urls', None)
-if st.session_state['mapa_html'] and st.session_state['pdf_file']:
-    try:
-        with open(st.session_state['pdf_file'], "rb") as f:
-            st.download_button("📄 Descargar informe PDF", f, file_name="informe_afecciones.pdf")
-    except Exception as e:
-        st.error(f"Error al descargar el PDF: {str(e)}")
+            
+# === BOTONES DE DESCARGA (SIN KeyError NUNCA MÁS) ===
+st.markdown("---")
 
-    try:
-        with open(st.session_state['mapa_html'], "r") as f:
-            st.download_button("🌍 Descargar mapa HTML", f, file_name="mapa_busqueda.html")
-    except Exception as e:
-        st.error(f"Error al descargar el mapa HTML: {str(e)}")
+if st.session_state.get('mapa_html') and st.session_state.get('pdf_file'):
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        try:
+            with open(st.session_state['pdf_file'], "rb") as f:
+                st.download_button(
+                    label="Descargar Informe PDF",
+                    data=f,
+                    file_name="informe_afecciones.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+        except Exception as e:
+            st.error(f"Error al cargar PDF: {e}")
+    
+    with col2:
+        try:
+            with open(st.session_state['mapa_html'], "r", encoding="utf-8") as f:
+                st.download_button(
+                    label="Descargar Mapa HTML",
+                    data=f.read(),
+                    file_name="mapa_afecciones.html",
+                    mime="text/html",
+                    use_container_width=True
+                )
+        except Exception as e:
+            st.error(f"Error al cargar mapa HTML: {e}")
+else:
+    st.info("Selecciona una parcela y pulsa **Analizar** para generar el informe.")
