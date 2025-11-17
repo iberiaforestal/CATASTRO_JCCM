@@ -999,23 +999,26 @@ def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
 def encontrar_municipio_poligono_parcela(x, y):
-    try:
-        punto = Point(x, y)
-        for provincia, municipios in shp_urls.items():
-            for nombre_mostrar, nombre_carpeta in municipios.items():
-                gdf = cargar_shapefile_clm(provincia, nombre_carpeta)
-                if gdf is None:
-                    continue    
-                seleccion = gdf[gdf.contains(punto)]
-                if not seleccion.empty:
-                    parcela_gdf = seleccion.iloc[[0]]
-                    masa = parcela_gdf["MASA"].iloc[0]
-                    parcela = parcela_gdf["PARCELA"].iloc[0]
-                    return nombre_mostrar, masa, parcela, parcela_gdf
-        return "N/A", "N/A", "N/A", None
-    except Exception as e:
-        st.error(f"Error al buscar parcela: {str(e)}")
-        return "N/A", "N/A", "N/A", None
+    point = Point(x, y)
+    for provincia, municipios in shp_urls.items():
+        print(f"Buscando en provincia: {provincia}")  # ← Log
+        for municipio, carpeta in municipios.items():
+            print(f"  Cargando shapefile para {municipio} ({carpeta})...")  # ← Log
+            gdf = cargar_shapefile_clm(provincia, carpeta)
+            if gdf is not None and not gdf.empty:
+                print(f"    Shapefile cargado: {len(gdf)} parcelas. CRS: {gdf.crs}")  # ← Verifica CRS
+                parcela_gdf = gdf[gdf.geometry.contains(point)]
+                if not parcela_gdf.empty:
+                    masa = parcela_gdf.iloc[0]["MASA"]
+                    parcela = parcela_gdf.iloc[0]["PARCELA"]
+                    print(f"    Encontrado: Municipio={municipio}, Polígono={masa}, Parcela={parcela}")  # ← Log éxito
+                    return municipio, masa, parcela, parcela_gdf
+                else:
+                    print(f"    Punto no encontrado en {municipio}")  # ← Log fallo
+            else:
+                print(f"    Error cargando shapefile de {municipio}")  # ← Log error
+    print("No se encontró ninguna parcela.")  # ← Log final
+    return "N/A", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
 def transformar_coordenadas(x, y):
