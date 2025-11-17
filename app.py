@@ -1716,7 +1716,11 @@ if submitted:
         else:
             # === 4. DEFINIR query_geom (UNA VEZ) ===
             if modo == "Por parcela":
-                query_geom = parcela.geometry.iloc[0]
+                if parcela is not None and hasattr(parcela, 'geometry') and parcela.geometry is not None:
+                    query_geom = parcela.geometry
+                else:
+                    st.error("Error: no se pudo obtener la geometría de la parcela.")
+                    st.stop()
             else:
                 query_geom = Point(x, y)
 
