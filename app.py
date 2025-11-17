@@ -130,7 +130,7 @@ def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
     with tempfile.TemporaryDirectory() as tmpdir:
         local_paths = {}
         for ext in exts:
-            filename = f"PARCELA{ext}"
+            filename = f"{nombre_carpeta_municipio}{ext}"
             url = f"{base_url}{provincia}/{nombre_carpeta_municipio}/{filename}"
             
             try:
