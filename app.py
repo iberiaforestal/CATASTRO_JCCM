@@ -1402,7 +1402,7 @@ def generar_pdf(datos, x, y, filename):
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 10, f"Coordenadas ETRS89: X = {x}, Y = {y}", ln=True)
 
-    imagen_mapa_path = generar_imagen_estatica_mapa(x, y)
+    imagen_mapa_path = st.session_state.get('mapa_imagen_path')
     if imagen_mapa_path and os.path.exists(imagen_mapa_path):
         epw = pdf.w - 2 * pdf.l_margin
         pdf.ln(5)
@@ -1417,6 +1417,7 @@ def generar_pdf(datos, x, y, filename):
 
     pdf.add_page()
     pdf.ln(10)
+    
     seccion_titulo("3. Afecciones detectadas")
 
     afecciones_keys = ["Afección TM"]
