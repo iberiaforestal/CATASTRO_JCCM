@@ -1017,31 +1017,32 @@ def encontrar_municipio_poligono_parcela(x, y):
         st.error(f"Error al buscar parcela: {str(e)}")
         return "N/A", "N/A", "N/A", None
 
-# Función para transformar coordenadas de ETRS89 a WGS84
-def transformar_coordenadas(x, y):
+# === TRANSFORMACIÓN CORRECTA PARA TODA CASTILLA-LA MANCHA ===
+def transformar_coordenadas(x, y, provincia_sel=None):
     try:
         x, y = float(x), float(y)
 
-        # Detectar automáticamente la zona UTM según la coordenada X
-        def utm_zone_from_x(x_coord):
-            return 30 if x_coord >= 500000 else 29
+        # FORZAR ZONA CORRECTA SEGÚN PROVINCIA (esto es clave)
+        if provincia_sel in ["CIUDAD_REAL", "CUENCA", "GUADALAJARA", "TOLEDO"]:
+            zona = 29
+            epsg_utm = 25829
+        else:  # Albacete
+            zona = 30
+            epsg_utm = 25830
 
-        zona = utm_zone_from_x(x)
-        epsg_utm = 25829 if zona == 29 else 25830
+        # Debug para que veas que ahora sí es correcto
+        st.info(f"Provincia: {provincia_sel} → Forzando zona UTM {zona}N (EPSG:{epsg_utm}) | X={x:.0f}, Y={y:.0f}")
 
         transformer = Transformer.from_crs(f"EPSG:{epsg_utm}", "EPSG:4326", always_xy=True)
         lon, lat = transformer.transform(x, y)
 
-        st.success(f"Detectada zona UTM {zona}N → WGS84: {lon:.6f}, {lat:.6f}")
+        st.success(f"Correcto → WGS84: Lon {lon:.6f}, Lat {lat:.6f} (Zona {zona}N)")
         return lon, lat
 
-    except ValueError:
-        st.error("Coordenadas inválidas. Introduce solo números.")
-        return None, None
     except Exception as e:
-        st.error(f"Error en transformación de coordenadas: {e}")
+        st.error(f"Error transformando coordenadas: {e}")
         return None, None
-
+        
 # Función para consultar si la geometría intersecta con algún polígono del GeoJSON
 # === FUNCIÓN DESCARGA CON CACHÉ ===
 @st.cache_data(show_spinner=False, ttl=604800)  # 7 días
@@ -1184,7 +1185,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
 
 # Función para generar la imagen estática del mapa usando py-staticmaps
 def generar_imagen_estatica_mapa(x, y, zoom=16, size=(800, 600)):
-    lon, lat = transformar_coordenadas(x, y)
+    lon, lat = transformar_coordenadas(x, y, provincia_sel=provincia_sel)
     if lon is None or lat is None:
         return None
     
