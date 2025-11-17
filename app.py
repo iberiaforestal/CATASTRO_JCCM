@@ -283,7 +283,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
         },
         {
             "nombre": "Montes de Utilidad Pública",
-            "servicio": "montes_up/FeatureServer/0",
+            "servicio": "montes_utilidad_publica/FeatureServer/0",
             "color": "#8B4513",      # marrón
             "fill": "#D2691E",
             "opacity": 0.30,
@@ -293,7 +293,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
         },
         {
             "nombre": "Vías Pecuarias",
-            "servicio": "vias_pecuarias_polig_1k/FeatureServer/0",
+            "servicio": "vias_pecuarias_poligonos/FeatureServer/1",
             "color": "#FF8C00",      # naranja fuerte
             "fill": "#FFA500",
             "opacity": 0.20,
@@ -304,47 +304,6 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     ]
 
     base_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services"
-
-    # Área de búsqueda alrededor del punto (~20 km → carga ultrarrápida)
-    margin = 0.20
-    bbox = f"{lon-margin},{lat-margin},{lon+margin},{lat+margin}"
-
-    for capa in capas_jccm:
-        try:
-            url = f"{base_url}/{capa['servicio']}/query"
-            params = {
-                "geometry": bbox,
-                "geometryType": "esriGeometryEnvelope",
-                "inSR": 4326,
-                "spatialRel": "esriSpatialRelIntersects",
-                "outFields": "*",
-                "returnGeometry": "true",
-                "f": "geojson"
-            }
-            response = session.get(url, params=params, timeout=20)
-            response.raise_for_status()
-            data = response.json()
-
-            if data.get("features"):
-                folium.GeoJson(
-                    data,
-                    name=capa["nombre"],
-                    style_function=lambda x, c=capa: {
-                        "fillColor": c["fill"],
-                        "color": c["color"],
-                        "weight": c["weight"],
-                        "fillOpacity": c["opacity"]
-                    },
-                    tooltip=folium.GeoJsonTooltip(
-                        fields=capa["fields"],
-                        aliases=capa["aliases"],
-                        localize=True
-                    ),
-                    popup=folium.GeoJsonPopup(
-                        fields=capa["fields"],
-                        aliases=capa["aliases"]
-                    )
-                ).add_to(m)
 
         except Exception as e:
             st.warning(f"Capa no disponible: {capa['nombre']} → {str(e)}")
