@@ -1282,7 +1282,7 @@ def hay_espacio_suficiente(pdf, altura_necesaria, margen_inferior=20):
     return espacio_disponible >= altura_necesaria
 
 def generar_pdf(datos, x, y, filename):
-    logo_path = "logos.jpg"
+    logo_path = "logos.jpg" 
 
     if not os.path.exists(logo_path):
         st.error("FALTA EL ARCHIVO: 'logos.jpg' en la raíz del proyecto.")
