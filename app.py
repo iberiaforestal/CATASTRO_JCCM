@@ -1762,7 +1762,7 @@ if submitted:
         else:
             # === 4. DEFINIR query_geom (UNA VEZ) ===
             if modo == "Por parcela":
-                query_geom = parcela.unary_union
+                query_geom = parcela.geometry.iloc[0]
             else:
                 query_geom = Point(x, y)
 
