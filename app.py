@@ -267,69 +267,92 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
         except Exception as e:
             st.warning(f"No se pudo dibujar la parcela en el mapa: {str(e)}")
 
-# ===================================================================
-    # NUEVAS CAPAS OFICIALES JCCM 2025 (Red Natura, Montes y Vías Pecuarias)
     # ===================================================================
-    wms_layers = [
-        ("Red Natura 2000", "red_natura_2000_limites"),
-        ("Montes", "montes_utilidad_publica"),
-        ("Vias Pecuarias", "vias_pecuarias_poligonos")
+    # CAPAS OFICIALES JCCM 2025 – Versión definitiva (igual de bonita que Murcia)
+    # ===================================================================
+    capas_clm = [
+        {
+            "nombre": "Red Natura 2000 CLM",
+            "servicio": "red_natura_2000_limites/FeatureServer/1",
+            "color": "#006400",
+            "fill": "#228B22",
+            "opacity": 0.3,
+            "weight": 3
+        },
+        {
+            "nombre": "Montes de Utilidad Pública",
+            "servicio": "montes_up/FeatureServer/0",
+            "color": "#8B4513",
+            "fill": "#D2691E",
+            "opacity": 0.35,
+            "weight": 2
+        },
+        {
+            "nombre": "Vías Pecuarias",
+            "servicio": "vias_pecuarias_clm/FeatureServer/0",   # Nombre correcto 2025
+            "color": "#FF8C00",
+            "fill": "#FFA500",
+            "opacity": 0.25,
+            "weight": 2
+        }
     ]
-    for name, layer in wms_layers:
+
+    base_rest = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services"
+    margin = 0.18  # ~18 km alrededor del punto
+    bbox = f"{lon-margin},{lat-margin},{lon+margin},{lat+margin}"
+
+    for capa in capas_clm:
         try:
-            folium.raster_layers.WmsTileLayer(
-                url="hhttps://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services",
-                name=name,
-                fmt="image/png",
-                layers=layer,
-                transparent=True,
-                opacity=0.25,
-                control=True
-            ).add_to(m)
-        except Exception as e:
-            st.error(f"Error al cargar la capa WMS {name}: {str(e)}")
+            url = f"{base_rest}/{capa['servicio']}/query"
+            params = {
+                "geometry": bbox,
+                "geometryType": "esriGeometryEnvelope",
+                "inSR": 4326,
+                "spatialRel": "esriSpatialRelIntersects",
+                "outFields": "*",
+                "returnGeometry": "true",
+                "f": "geojson"
+            }
+            r = session.get(url, params=params, timeout=15)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("features"):
+                    folium.GeoJson(
+                        data,
+                        name=capa["nombre"],
+                        style_function=lambda x, c=capa: {
+                            "fillColor": c["fill"],
+                            "color": c["color"],
+                            "weight": c["weight"],
+                            "fillOpacity": c["opacity"]
+                        }
+                    ).add_to(m)
+        except:
+            pass  # si alguna falla, seguimos con las demás
 
-    folium.LayerControl().add_to(m)
-
+    # ===================================================================
+    # LEYENDA FIJA (igual que en Murcia, pero con colores de CLM)
+    # ===================================================================
     legend_html = """
     {% macro html(this, kwargs) %}
-<div style="
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    background-color: white;
-    border: 1px solid grey;
-    z-index: 9999;
-    font-size: 10px;
-    padding: 5px;
-    box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-    line-height: 1.1em;
-    width: auto;
-    transform: scale(0.75);
-    transform-origin: top left;
-">
-    <b>Leyenda</b><br>
-    <div>
-        <img src="https://mapas-gis-inter.carm.es/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=SIG_LUP_SITES_CARM%3ARN2000" alt="Red Natura"><br>
-        <img src="https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/montes_utilidad_publica/FeatureServer/layers=montes_utilidad_publica" alt="Montes"><br>
-        <img src="https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/vias_pecuarias_poligonos/FeatureServer/layers=vias_pecuarias_poligonos" alt="Vias Pecuarias"><br>
+    <div style="
+        position: fixed; 
+        bottom: 20px; left: 20px; width: 180px; height: 110px; 
+        background-color: white; border:2px solid grey; z-index:9999; 
+        font-size:12px; padding: 10px; box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+    ">
+        <b style="font-size:13px;">Leyenda JCCM</b><br>
+        <i style="background:#228B22; opacity:0.7; width:15px; height:15px; display:inline-block; border:2px solid #006400;"></i>&nbsp;Red Natura 2000<br>
+        <i style="background:#D2691E; opacity:0.7; width:15px; height:15px; display:inline-block; border:2px solid #8B4513;"></i>&nbsp;Montes UP<br>
+        <i style="background:#FFA500; opacity:0.7; width:15px; height:15px; display:inline-block; border:2px solid #FF8C00;"></i>&nbsp;Vías Pecuarias
     </div>
-</div>
-{% endmacro %}
-"""
-
+    {% endmacro %}
+    """
     legend = MacroElement()
     legend._template = Template(legend_html)
     m.get_root().add_child(legend)
 
-    for afeccion in afecciones:
-        folium.Marker([lat, lon], popup=afeccion).add_to(m)
-
-    uid = uuid.uuid4().hex[:8]
-    mapa_html = f"mapa_{uid}.html"
-    m.save(mapa_html)
-
-    return mapa_html, afecciones
+    folium.LayerControl(collapsed=False).add_to(m)
 
 # Función para generar la imagen estática del mapa usando py-staticmaps
 def generar_imagen_estatica_mapa(x, y, zoom=16, size=(800, 600)):
