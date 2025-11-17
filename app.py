@@ -267,25 +267,89 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
         except Exception as e:
             st.warning(f"No se pudo dibujar la parcela en el mapa: {str(e)}")
 
-    wms_layers = [
-        ("Red Natura 2000", "SIG_LUP_SITES_CARM:RN2000"),
-        ("Montes", "PFO_ZOR_DMVP_CARM:MONTES"),
-        ("Vias Pecuarias", "PFO_ZOR_DMVP_CARM:VP_CARM")
+# ===================================================================
+    # NUEVAS CAPAS OFICIALES JCCM 2025 (Red Natura, Montes y Vías Pecuarias)
+    # ===================================================================
+    capas_jccm = [
+        {
+            "nombre": "Red Natura 2000 CLM",
+            "servicio": "red_natura_2000_limites/FeatureServer/1",
+            "color": "#006400",      # verde oscuro
+            "fill": "#228B22",
+            "opacity": 0.25,
+            "weight": 3,
+            "fields": ["nombre_sitio", "tipo_proteccion", "codigo_sitio"],
+            "aliases": ["Sitio", "Tipo", "Código"]
+        },
+        {
+            "nombre": "Montes de Utilidad Pública",
+            "servicio": "montes_up/FeatureServer/0",
+            "color": "#8B4513",      # marrón
+            "fill": "#D2691E",
+            "opacity": 0.30,
+            "weight": 2,
+            "fields": ["nombre_mup", "municipio", "superficie"],
+            "aliases": ["Monte", "Municipio", "Superficie (ha)"]
+        },
+        {
+            "nombre": "Vías Pecuarias",
+            "servicio": "vias_pecuarias_polig_1k/FeatureServer/0",
+            "color": "#FF8C00",      # naranja fuerte
+            "fill": "#FFA500",
+            "opacity": 0.20,
+            "weight": 2,
+            "fields": ["nombre_vp", "clasificac", "ancho"],
+            "aliases": ["Nombre", "Clasificación", "Ancho (m)"]
+        }
     ]
-    for name, layer in wms_layers:
-        try:
-            folium.raster_layers.WmsTileLayer(
-                url="https://mapas-gis-inter.carm.es/geoserver/ows?SERVICE=WMS&?",
-                name=name,
-                fmt="image/png",
-                layers=layer,
-                transparent=True,
-                opacity=0.25,
-                control=True
-            ).add_to(m)
-        except Exception as e:
-            st.error(f"Error al cargar la capa WMS {name}: {str(e)}")
 
+    base_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services"
+
+    # Área de búsqueda alrededor del punto (~20 km → carga ultrarrápida)
+    margin = 0.20
+    bbox = f"{lon-margin},{lat-margin},{lon+margin},{lat+margin}"
+
+    for capa in capas_jccm:
+        try:
+            url = f"{base_url}/{capa['servicio']}/query"
+            params = {
+                "geometry": bbox,
+                "geometryType": "esriGeometryEnvelope",
+                "inSR": 4326,
+                "spatialRel": "esriSpatialRelIntersects",
+                "outFields": "*",
+                "returnGeometry": "true",
+                "f": "geojson"
+            }
+            response = session.get(url, params=params, timeout=20)
+            response.raise_for_status()
+            data = response.json()
+
+            if data.get("features"):
+                folium.GeoJson(
+                    data,
+                    name=capa["nombre"],
+                    style_function=lambda x, c=capa: {
+                        "fillColor": c["fill"],
+                        "color": c["color"],
+                        "weight": c["weight"],
+                        "fillOpacity": c["opacity"]
+                    },
+                    tooltip=folium.GeoJsonTooltip(
+                        fields=capa["fields"],
+                        aliases=capa["aliases"],
+                        localize=True
+                    ),
+                    popup=folium.GeoJsonPopup(
+                        fields=capa["fields"],
+                        aliases=capa["aliases"]
+                    )
+                ).add_to(m)
+
+        except Exception as e:
+            st.warning(f"Capa no disponible: {capa['nombre']} → {str(e)}")
+
+    # Control de capas (importante, no lo quites)
     folium.LayerControl().add_to(m)
 
     legend_html = """
