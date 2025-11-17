@@ -118,8 +118,7 @@ shp_urls = {
         "VILLAVERDE DE GUADALIMAR": "VILLAVERDE DE GUADALIMAR",
         "VIVEROS": "VIVEROS",
         "YESTE": "YESTE",
-    }
-    
+    },
     "CIUDAD REAL": {
         "ABENOJAR": "ABENOJAR",
         "AGUDO": "AGUDO",
