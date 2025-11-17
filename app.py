@@ -20,6 +20,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import shutil
 from PIL import Image
+from pyproj.aoi import AreaOfInterest
+from pyproj.database import query_utm_crs_info
 
 # Sesión segura con reintentos
 session = requests.Session()
@@ -1018,17 +1020,35 @@ def encontrar_municipio_poligono_parcela(x, y):
         return "N/A", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
+# === DETECCIÓN AUTOMÁTICA ZONA 29N / 30N + TRANSFORMACIÓN CORRECTA ===
+def obtener_epsg_utm(x: float, y: float) -> str:
+    """
+    En Castilla-La Mancha:
+    - X < 500000  → Zona 29N → EPSG:25829 (Toledo oeste, parte Guadalajara)
+    - X ≥ 500000  → Zona 30N → EPSG:25830 (resto de la región)
+    """
+    if x == 0 and y == 0:
+        return "25830"
+    return "25829" if x < 500000 else "25830"
+
+
 def transformar_coordenadas(x, y):
     try:
         x, y = float(x), float(y)
-        if not (500000 <= x <= 800000 and 4000000 <= y <= 4800000):
-            st.error("Coordenadas fuera del rango esperado para ETRS89 UTM Zona 30")
+        if x == 0 and y == 0:
             return None, None
-        transformer = Transformer.from_crs("EPSG:25830", "EPSG:4326", always_xy=True)
+
+        # Detectamos automáticamente la zona UTM
+        epsg = obtener_epsg_utm(x, y)
+        
+        # Transformamos a WGS84 (lat/lon)
+        transformer = Transformer.from_crs(f"EPSG:{epsg}", "EPSG:4326", always_xy=True)
         lon, lat = transformer.transform(x, y)
+        
         return lon, lat
-    except ValueError:
-        st.error("Coordenadas inválidas. Asegúrate de ingresar valores numéricos.")
+        
+    except (ValueError, Exception):
+        st.error("Coordenadas no válidas o fuera del rango de Castilla-La Mancha.")
         return None, None
 
 # Función para consultar si la geometría intersecta con algún polígono del GeoJSON
