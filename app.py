@@ -968,36 +968,58 @@ shp_urls = {
 
 # Función para cargar shapefiles desde GitHub
 @st.cache_data(ttl=3600)
-def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
-    base_url = "https://raw.githubusercontent.com/iberiaforestal/CATASTRO_JCCM/master/CATASTRO/"
-    exts = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
-    
-    with tempfile.TemporaryDirectory() as tmpdir:
-        local_paths = {}
-        for ext in exts:
-            filename = f"{nombre_carpeta_municipio}{ext}"
-            url = f"{base_url}{provincia}/{nombre_carpeta_municipio}/{filename}"
-            
+def cargar_shapefile_clm(provincia, municipio):
+    base_url = f"https://raw.githubusercontent.com/iberiaforestal/shp_clm/main/{provincia}/{municipio}"
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        archivos_descargados = []
+        for ext in ['.shp', '.shx', '.dbf', '.prj', '.cpg']:
+            url = f"{base_url}{ext}"
+            archivo_local = os.path.join(tmpdirname, f"{municipio}{ext}")
             try:
-                response = requests.get(url, timeout=100)
-                response.raise_for_status()
-            except requests.exceptions.RequestException as e:
-                st.error(f"Error al descargar {url}: {str(e)}")
-                return None
-            
-            local_path = os.path.join(tmpdir, filename)
-            with open(local_path, "wb") as f:
-                f.write(response.content)
-            local_paths[ext] = local_path
-
-        shp_path = local_paths[".shp"]
+                response = session.get(url, timeout=20)
+                if response.status_code == 200:
+                    with open(archivo_local, 'wb') as f:
+                        f.write(response.content)
+                    archivos_descargados.append(archivo_local)
+            except:
+                pass
         
-        try:
-            gdf = gpd.read_file(shp_path)
-            return gdf
-        except Exception as e:
-            st.error(f"Error leyendo shapefile de {nombre_carpeta_municipio}: {e}")
+        if not archivos_descargados:
+            st.error(f"No se pudieron descargar los archivos para {municipio}")
             return None
+
+        try:
+            # Leemos SIN forzar CRS
+            gdf = gpd.read_file(os.path.join(tmpdirname, f"{municipio}.shp"))
+            
+            # Si no tiene CRS (raro), lo ponemos a 25830
+            if gdf.crs is None:
+                st.warning(f"{municipio} no tiene .prj → se asume EPSG:25830")
+                gdf.set_crs("EPSG:25830", inplace=True)
+            
+            # SI el CRS original es ED50 (23030), lo convertimos a ETRS89 (25830)
+            if gdf.crs.to_epsg() == 23030:
+                st.info(f"{municipio} estaba en ED50 (23030) → convirtiendo a ETRS89 (25830)")
+                gdf = gdf.to_crs("EPSG:25830")
+            
+            # FORZAMOS siempre al final a 25830 (el que usa el resto del código)
+            gdf = gdf.to_crs("EPSG:25830")
+            
+            return gdf
+            
+        except Exception as e:
+            st.error(f"Error leyendo shapefile de {municipio}: {str(e)}")
+            return None
+
+def obtener_zona_utm(lon):
+    """Devuelve el EPSG correcto según la longitud (solo para CLM)"""
+    zona = int((lon + 180) / 6) + 1
+    if zona == 29:
+        return "EPSG:25829"
+    elif zona == 30:
+        return "EPSG:25830"
+    else:
+        return "EPSG:25830"  # por seguridad
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
 def encontrar_municipio_poligono_parcela(x: float, y: float):
@@ -2534,16 +2556,16 @@ if modo == "Por parcela":
         fila_parcela = parcelas_del_poligono[parcelas_del_poligono["PARCELA"] == parcela_sel]
         
 if not fila_parcela.empty:
-        parcela = fila_parcela.iloc[0]
-        if parcela.geometry is not None:
-            # Asegurar que gdf esté en 25830
-            gdf_temp = gpd.GeoDataFrame([parcela], crs=gdf.crs).to_crs("EPSG:25830")
-            centroide = gdf_temp.geometry.iloc[0].centroid
-            x = centroide.x
-            y = centroide.y
-            st.success("Parcela cargada correctamente.")
-        else:
-            x = y = 0.0
+    parcela = fila_parcela.iloc[0]
+    if parcela.geometry is not None:
+        # Nos aseguramos de que esté en 25830
+        geom_25830 = gpd.GeoSeries([parcela.geometry], crs=gdf.crs).to_crs("EPSG:25830").iloc[0]
+        centroide = geom_25830.centroid
+        x = centroide.x
+        y = centroide.y
+        st.success(f"Parcela cargada → X: {x:.2f}, Y: {y:.2f}")
+    else HAY QUE AJUSTAR
+        x = y = 0.0
 
 with st.form("formulario"):
     if modo == "Por coordenadas":
