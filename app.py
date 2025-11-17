@@ -1021,14 +1021,25 @@ def encontrar_municipio_poligono_parcela(x, y):
 def transformar_coordenadas(x, y):
     try:
         x, y = float(x), float(y)
-        if not (500000 <= x <= 800000 and 4000000 <= y <= 4800000):
-            st.error("Coordenadas fuera del rango esperado para ETRS89 UTM Zona 30")
-            return None, None
-        transformer = Transformer.from_crs("EPSG:25830", "EPSG:4326", always_xy=True)
+
+        # Detectar automáticamente la zona UTM según la coordenada X
+        def utm_zone_from_x(x_coord):
+            return 30 if x_coord >= 500000 else 29
+
+        zona = utm_zone_from_x(x)
+        epsg_utm = 25829 if zona == 29 else 25830
+
+        transformer = Transformer.from_crs(f"EPSG:{epsg_utm}", "EPSG:4326", always_xy=True)
         lon, lat = transformer.transform(x, y)
+
+        st.success(f"Detectada zona UTM {zona}N → WGS84: {lon:.6f}, {lat:.6f}")
         return lon, lat
+
     except ValueError:
-        st.error("Coordenadas inválidas. Asegúrate de ingresar valores numéricos.")
+        st.error("Coordenadas inválidas. Introduce solo números.")
+        return None, None
+    except Exception as e:
+        st.error(f"Error en transformación de coordenadas: {e}")
         return None, None
 
 # Función para consultar si la geometría intersecta con algún polígono del GeoJSON
