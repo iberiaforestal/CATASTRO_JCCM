@@ -1053,6 +1053,30 @@ def _descargar_geojson(url):
             st._wfs_warnings.add(warning_key)
         return None
 
+# --- NUEVA FUNCIÓN (PASO 1) ---
+def interpretar_coordenadas(x, y):
+    """
+    Detecta si el usuario ha introducido WGS84 (lon/lat)
+    o UTM (ETRS89 zona 30). Siempre devuelve UTM.
+    """
+    try:
+        x = float(x)
+        y = float(y)
+    except:
+        return None, None, "INVALIDO"
+
+    # Si parece lon/lat en España
+    if -10.5 <= x <= 5.5 and 35 <= y <= 46:
+        transformer = Transformer.from_crs("EPSG:4326", "EPSG:25830", always_xy=True)
+        utm_x, utm_y = transformer.transform(x, y)
+        return utm_x, utm_y, "WGS84"
+
+    # Si parece UTM ETRS89 zona 30
+    if 100000 <= x <= 900000 and 3500000 <= y <= 5000000:
+        return x, y, "ETRS89"
+
+    return None, None, "INVALIDO"
+
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
     """
@@ -2522,25 +2546,37 @@ if modo == "Por parcela":
         gdf = None
 
 with st.form("formulario"):
-    if modo == "Por coordenadas":
-        x = st.number_input("Coordenada X (ETRS89)", format="%.2f", help="Introduce coordenadas en metros, sistema ETRS89 / UTM zona 30")
-        y = st.number_input("Coordenada Y (ETRS89)", format="%.2f")
 
-        # Solo intentamos buscar la referencia catastral si el usuario escribe algo distinto de 0,0
+    if modo == "Por coordenadas":
+
+        x = st.number_input("Coordenada X (UTM ETRS89 o lon WGS84)", format="%.6f")
+        y = st.number_input("Coordenada Y (UTM ETRS89 o lat WGS84)", format="%.6f")
+
         if x != 0.0 or y != 0.0:
-            municipio_encontrado, masa_sel, parcela_sel, parcela_gdf = encontrar_municipio_poligono_parcela(x, y)
-            
-            if municipio_encontrado != "N/A":
-                municipio_sel = municipio_encontrado
-                st.success(f"Referencia catastral detectada → Municipio: {municipio_sel} | Polígono: {masa_sel} | Parcela: {parcela_sel}")
-                # Opcional: guardamos la fila para usarla luego si queremos
-                parcela = parcela_gdf.iloc[0] if parcela_gdf is not None else None
+
+            # PASO 2 — Usamos la función del PASO 1
+            utm_x, utm_y, tipo_coord = interpretar_coordenadas(x, y)
+
+            if tipo_coord == "INVALIDO":
+                st.error("Coordenadas no válidas: introduce lon/lat (WGS84) o UTM (ETRS89).")
+
             else:
-                st.info("No se encontró ninguna parcela catastral en ese punto exacto.")
-        else:
-            st.info("Introduce coordenadas válidas para comenzar.")
-    else:
-        st.info(f"Coordenadas obtenidas del centroide de la parcela: X = {x}, Y = {y}")
+                if tipo_coord == "WGS84":
+                    st.info("Detectadas coordenadas en WGS84 (lon/lat). Convertidas automáticamente a UTM.")
+                else:
+                    st.info("Detectadas coordenadas en UTM ETRS89.")
+
+                municipio_encontrado, masa_sel, parcela_sel, parcela_gdf = encontrar_municipio_poligono_parcela(utm_x, utm_y)
+
+                if municipio_encontrado != "N/A":
+                    municipio_sel = municipio_encontrado
+                    st.success(f"Municipio: {municipio_sel} | Polígono: {masa_sel} | Parcela: {parcela_sel}")
+
+                    st.session_state['utm_x'] = utm_x
+                    st.session_state['utm_y'] = utm_y
+
+                else:
+                    st.warning("No se encontró ninguna parcela en ese punto.")
         
     nombre = st.text_input("Nombre")
     apellidos = st.text_input("Apellidos")
@@ -2575,19 +2611,36 @@ if submitted:
         st.warning("Por favor, completa todos los campos obligatorios y asegúrate de que las coordenadas son válidas.")
     else:
         # === 3. TRANSFORMAR COORDENADAS ===
-        lon, lat = transformar_coordenadas(x, y)
+        # 1) Recuperar UTM desde paso 2
+        utm_x = st.session_state.get('utm_x', None)
+        utm_y = st.session_state.get('utm_y', None)
+
+        # 2) Si no estaban guardadas, interpretamos x,y
+        if utm_x is None or utm_y is None:
+            utm_x, utm_y, tipo_coord = interpretar_coordenadas(x, y)
+            if tipo_coord == "INVALIDO" or utm_x is None:
+                st.error("No se pudo generar el informe: coordenadas inválidas.")
+                st.stop()
+
+        # 3) Convertir UTM → WGS84 (lon, lat)
+        lon, lat = transformar_coordenadas(utm_x, utm_y)
         if lon is None or lat is None:
-            st.error("No se pudo generar el informe debido a coordenadas inválidas.") 
-        else:
-            # === 4. DEFINIR query_geom (UNA VEZ) ===
-            if modo == "Por parcela":
-                if parcela is not None and hasattr(parcela, 'geometry') and parcela.geometry is not None:
-                    query_geom = parcela.geometry          # ← ES UN POLÍGONO, NO HAY .iloc[0]
-                else:
-                    st.error("Error crítico: no se pudo obtener la geometría de la parcela.")
-                    st.stop()
-            else:
-                query_geom = Point(x, y)
+            st.error("No se pudo transformar las coordenadas a WGS84.")
+            st.stop()
+
+        # 4) IMPORTANTÍSIMO: fijar x,y a las UTM correctas
+        x = utm_x
+        y = utm_y
+
+# === 4. DEFINIR query_geom (UNA VEZ) ===
+if modo == "Por parcela":
+    if parcela is not None and hasattr(parcela, 'geometry') and parcela.geometry is not None:
+        query_geom = parcela.geometry
+    else:
+        st.error("Error crítico: no se pudo obtener la geometría de la parcela.")
+        st.stop()
+else:
+    query_geom = Point(x, y)
 
             # === 5. GUARDAR query_geom Y URLs EN SESSION_STATE ===
             st.session_state['query_geom'] = query_geom
