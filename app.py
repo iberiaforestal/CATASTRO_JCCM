@@ -158,18 +158,17 @@ def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
 def encontrar_municipio_poligono_parcela(x, y):
     try:
         punto = Point(x, y)
-    
-    for provincia, municipios in shp_urls.items():
-        for nombre_mostrar, nombre_carpeta in municipios.items():
-            gdf = cargar_shapefile_clm(provincia, nombre_carpeta)
-            if gdf is None:
-                continue    
-            seleccion = gdf[gdf.contains(punto)]
-            if not seleccion.empty:
-                parcela_gdf = seleccion.iloc[[0]]
-                masa = parcela_gdf["MASA"].iloc[0]
-                parcela = parcela_gdf["PARCELA"].iloc[0]
-                return municipio, masa, parcela, parcela_gdf
+        for provincia, municipios in shp_urls.items():
+            for nombre_mostrar, nombre_carpeta in municipios.items():
+                gdf = cargar_shapefile_clm(provincia, nombre_carpeta)
+                if gdf is None:
+                    continue    
+                seleccion = gdf[gdf.contains(punto)]
+                if not seleccion.empty:
+                    parcela_gdf = seleccion.iloc[[0]]
+                    masa = parcela_gdf["MASA"].iloc[0]
+                    parcela = parcela_gdf["PARCELA"].iloc[0]
+                    return nombre_mostrar, masa, parcela, parcela_gdf
         return "N/A", "N/A", "N/A", None
     except Exception as e:
         st.error(f"Error al buscar parcela: {str(e)}")
