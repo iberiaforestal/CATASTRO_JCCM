@@ -270,45 +270,25 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
 # ===================================================================
     # NUEVAS CAPAS OFICIALES JCCM 2025 (Red Natura, Montes y Vías Pecuarias)
     # ===================================================================
-    capas_jccm = [
-        {
-            "nombre": "Red Natura 2000 CLM",
-            "servicio": "red_natura_2000_limites/FeatureServer/1",
-            "color": "#006400",      # verde oscuro
-            "fill": "#228B22",
-            "opacity": 0.25,
-            "weight": 3,
-            "fields": ["nombre_sitio", "tipo_proteccion", "codigo_sitio"],
-            "aliases": ["Sitio", "Tipo", "Código"]
-        },
-        {
-            "nombre": "Montes de Utilidad Pública",
-            "servicio": "montes_utilidad_publica/FeatureServer/0",
-            "color": "#8B4513",      # marrón
-            "fill": "#D2691E",
-            "opacity": 0.30,
-            "weight": 2,
-            "fields": ["nombre_mup", "municipio", "superficie"],
-            "aliases": ["Monte", "Municipio", "Superficie (ha)"]
-        },
-        {
-            "nombre": "Vías Pecuarias",
-            "servicio": "vias_pecuarias_poligonos/FeatureServer/1",
-            "color": "#FF8C00",      # naranja fuerte
-            "fill": "#FFA500",
-            "opacity": 0.20,
-            "weight": 2,
-            "fields": ["nombre_vp", "clasificac", "ancho"],
-            "aliases": ["Nombre", "Clasificación", "Ancho (m)"]
-        }
+    wms_layers = [
+        ("Red Natura 2000", "red_natura_2000_limites"),
+        ("Montes", "montes_utilidad_publica"),
+        ("Vias Pecuarias", "vias_pecuarias_poligonos")
     ]
-
-    base_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services"
-
+    for name, layer in wms_layers:
+        try:
+            folium.raster_layers.WmsTileLayer(
+                url="hhttps://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services?",
+                name=name,
+                fmt="image/png",
+                layers=layer,
+                transparent=True,
+                opacity=0.25,
+                control=True
+            ).add_to(m)
         except Exception as e:
-            st.warning(f"Capa no disponible: {capa['nombre']} → {str(e)}")
+            st.error(f"Error al cargar la capa WMS {name}: {str(e)}")
 
-    # Control de capas (importante, no lo quites)
     folium.LayerControl().add_to(m)
 
     legend_html = """
