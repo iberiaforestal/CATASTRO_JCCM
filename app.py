@@ -1631,13 +1631,19 @@ if modo == "Por parcela":
 
     gdf = cargar_shapefile_clm(provincia_sel, carpeta_municipio)     
     
-    if gdf is not None:
-        masa_sel = st.selectbox("Polígono", options=sorted(gdf["MASA"].astype(str).unique()))
-        opciones_parcelas = sorted(gdf[gdf["MASA"] == masa_sel]["PARCELA"].astype(str).unique())
-        parcela_sel = st.selectbox("Parcela", options=opciones_parcelas)
+if gdf is not None:
+    masa_sel = st.selectbox("Polígono", options=sorted(gdf["MASA"].astype(str).unique()))
+    opciones_parcelas = sorted(gdf[gdf["MASA"] == masa_sel]["PARCELA"].astype(str).unique())
+    parcela_sel = st.selectbox("Parcela", options=opciones_parcelas)
+    
+    # Filtrar la fila correcta y asignar a 'parcela' de forma segura
+    parcela_row = gdf[(gdf["MASA"] == masa_sel) & (gdf["PARCELA"] == parcela_sel)]
+    
+    if not parcela_row.empty:
+        parcela = parcela_row.iloc[0]  # ahora sí es una fila con geometría
         
-        if parcela.geometry.geom_type.isin(['Polygon', 'MultiPolygon']).all():
-            centroide = parcela.geometry.centroid.iloc[0]
+        if parcela.geometry.geom_type in ['Polygon', 'MultiPolygon']:
+            centroide = parcela.geometry.centroid
             x = centroide.x
             y = centroide.y         
                     
@@ -1647,8 +1653,16 @@ if modo == "Por parcela":
             st.write(f"Parcela: {parcela_sel}")
         else:
             st.error("La geometría seleccionada no es un polígono válido.")
+            parcela = None
+            x = y = 0.0
     else:
-        st.error(f"No se pudo cargar el shapefile para el municipio: {municipio_sel}")
+        st.error("No se encontró la combinación Polígono/Parcela seleccionada.")
+        parcela = None
+        x = y = 0.0
+else:
+    st.error(f"No se pudo cargar el shapefile para el municipio: {municipio_sel}")
+    parcela = None
+    x = y = 0.0
 
 with st.form("formulario"):
     if modo == "Por coordenadas":
