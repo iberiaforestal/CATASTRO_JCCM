@@ -278,7 +278,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     for name, layer in wms_layers:
         try:
             folium.raster_layers.WmsTileLayer(
-                url="hhttps://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services?",
+                url="hhttps://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services",
                 name=name,
                 fmt="image/png",
                 layers=layer,
@@ -311,8 +311,8 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     <b>Leyenda</b><br>
     <div>
         <img src="https://mapas-gis-inter.carm.es/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=SIG_LUP_SITES_CARM%3ARN2000" alt="Red Natura"><br>
-        <img src="https://mapas-gis-inter.carm.es/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=PFO_ZOR_DMVP_CARM%3AMONTES" alt="Montes"><br>
-        <img src="https://mapas-gis-inter.carm.es/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=PFO_ZOR_DMVP_CARM%3AVP_CARM" alt="Vias Pecuarias"><br>
+        <img src="https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/montes_utilidad_publica/FeatureServer/layers=montes_utilidad_publica" alt="Montes"><br>
+        <img src="https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/vias_pecuarias_poligonos/FeatureServer/layers=vias_pecuarias_poligonos" alt="Vias Pecuarias"><br>
     </div>
 </div>
 {% endmacro %}
