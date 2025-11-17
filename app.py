@@ -134,20 +134,21 @@ def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
             url = f"{base_url}{provincia}/{nombre_carpeta_municipio}/{filename}"
             
             try:
-                r = requests.get(url, timeout=60)
-                r.raise_for_status()
+                response = requests.get(url, timeout=100)
+                response.raise_for_status()
             except requests.exceptions.RequestException as e:
-                st.warning(f"No encontrado: {provincia}/{nombre_carpeta_municipio} → {filename}")
+                st.error(f"Error al descargar {url}: {str(e)}")
                 return None
             
-            path = os.path.join(tmpdir, filename)
-            with open(path, "wb") as f:
-                f.write(r.content)
-            local_paths[ext] = path
+            local_path = os.path.join(tmpdir, filename)
+            with open(local_path, "wb") as f:
+                f.write(response.content)
+            local_paths[ext] = local_path
+
+        shp_path = local_paths[".shp"]
         
         try:
-            gdf = gpd.read_file(local_paths[".shp"])
-            gdf = gdf.to_crs(epsg=25830)  # Aseguramos ETRS89 UTM zona 30
+            gdf = gpd.read_file(shp_path)
             return gdf
         except Exception as e:
             st.error(f"Error leyendo shapefile de {nombre_carpeta_municipio}: {e}")
@@ -155,21 +156,24 @@ def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
 def encontrar_municipio_poligono_parcela(x, y):
-    punto = Point(float(x), float(y))
+    try:
+        punto = Point(x, y)
     
     for provincia, municipios in shp_urls.items():
         for nombre_mostrar, nombre_carpeta in municipios.items():
             gdf = cargar_shapefile_clm(provincia, nombre_carpeta)
             if gdf is None:
-                continue
-                
-            if gdf.contains(punto).any():
-                fila = gdf[gdf.contains(punto)].iloc[0]
-                masa = fila.get("MASA", "N/A")
-                parcela = fila.get("PARCELA", "N/A")
-                return nombre_mostrar, masa, parcela, gdf[gdf.contains(punto)]
-    
-    return "Fuera de Castilla-La Mancha", "N/A", "N/A", None
+                continue    
+            seleccion = gdf[gdf.contains(punto)]
+            if not seleccion.empty:
+                parcela_gdf = seleccion.iloc[[0]]
+                masa = parcela_gdf["MASA"].iloc[0]
+                parcela = parcela_gdf["PARCELA"].iloc[0]
+                return municipio, masa, parcela, parcela_gdf
+        return "N/A", "N/A", "N/A", None
+    except Exception as e:
+        st.error(f"Error al buscar parcela: {str(e)}")
+        return "N/A", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
 def transformar_coordenadas(x, y):
@@ -1620,108 +1624,45 @@ parcela_sel = ""
 parcela = None
 
 if modo == "Por parcela":
-    # 1. Seleccionar provincia
     provincia_sel = st.selectbox("Provincia", options=sorted(shp_urls.keys()))
-    
-    # 2. Seleccionar municipio (solo los de esa provincia)
     municipios_de_provincia = sorted(shp_urls[provincia_sel].keys())
     municipio_sel = st.selectbox("Municipio", options=municipios_de_provincia)
     
-    # 3. Obtener el nombre exacto de la carpeta en GitHub
     carpeta_municipio = shp_urls[provincia_sel][municipio_sel]
-    
-    # 4. Cargar el shapefile (provincia + carpeta municipio)
-    with st.spinner(f"Descargando parcelario de {municipio_sel} ({provincia_sel})..."):
-        gdf = cargar_shapefile_clm(provincia_sel, carpeta_municipio)
+
+    gdf = cargar_shapefile_clm(provincia_sel, carpeta_municipio)     
     
     if gdf is not None:
-        # 5. Seleccionar polígono y parcela
         masa_sel = st.selectbox("Polígono", options=sorted(gdf["MASA"].astype(str).unique()))
         opciones_parcelas = sorted(gdf[gdf["MASA"] == masa_sel]["PARCELA"].astype(str).unique())
         parcela_sel = st.selectbox("Parcela", options=opciones_parcelas)
         
-        # 6. Filtrar la parcela seleccionada
-        parcela_gdf = gdf[(gdf["MASA"] == masa_sel) & (gdf["PARCELA"] == parcela_sel)]
-        
-        if not parcela_gdf.empty and parcela_gdf.geometry.geom_type.isin(['Polygon', 'MultiPolygon']).all():
-            centroide = parcela_gdf.geometry.centroid.iloc[0]
+        if parcela.geometry.geom_type.isin(['Polygon', 'MultiPolygon']).all():
+            centroide = parcela.geometry.centroid.iloc[0]
             x = centroide.x
-            y = centroide.y
-            
-            st.success("¡Parcela cargada correctamente desde GitHub!")
-            st.write(f"**Provincia:** {provincia_sel}")
-            st.write(f"**Municipio:** {municipio_sel}")
-            st.write(f"**Polígono:** {masa_sel}")
-            st.write(f"**Parcela:** {parcela_sel}")
-            st.write(f"**Coordenadas centroide:** X = {x:.2f}, Y = {y:.2f}")
+            y = centroide.y         
+                    
+            st.success("Parcela cargada correctamente.")
+            st.write(f"Municipio: {municipio_sel}")
+            st.write(f"Polígono: {masa_sel}")
+            st.write(f"Parcela: {parcela_sel}")
         else:
             st.error("La geometría seleccionada no es un polígono válido.")
     else:
-        st.error(f"No se pudo cargar el shapefile del municipio **{municipio_sel}** ({provincia_sel})")
+        st.error(f"No se pudo cargar el shapefile para el municipio: {municipio_sel}")
 
 with st.form("formulario"):
-    st.subheader("Localización de la parcela")
-
     if modo == "Por coordenadas":
-        col1, col2 = st.columns(2)
-        with col1:
-            x = st.number_input("Coordenada X (ETRS89 UTM 30N)", value=0.0, format="%.3f",
-                              help="Sistema ETRS89 / UTM zona 30N (en metros)")
-        with col2:
-            y = st.number_input("Coordenada Y (ETRS89 UTM 30N)", value=0.0, format="%.3f",
-                              help="Sistema ETRS89 / UTM zona 30N (en metros)")
-
-        # Solo buscar si el usuario ha puesto coordenadas distintas de cero
-        if st.form_submit_button("Buscar parcela por coordenadas"):
-            if x == 0.0 and y == 0.0:
-                st.warning("Introduce coordenadas válidas.")
+        x = st.number_input("Coordenada X (ETRS89)", format="%.2f", help="Introduce coordenadas en metros, sistema ETRS89 / UTM zona 30")
+        y = st.number_input("Coordenada Y (ETRS89)", format="%.2f")
+        if x == 0.0 and y == 0.0:
+            provincia_sel, municipio_sel, masa_sel, parcela_sel, parcela = encontrar_municipio_poligono_parcela(x, y)
+            if provincia_sel != "N/A":
+                st.success(f"Parcela encontrada: Provincia: {municipio_sel}, Municipio: {municipio_sel}, Polígono: {masa_sel}, Parcela: {parcela_sel}")
             else:
-                with st.spinner("Buscando parcela en los 919 municipios de Castilla-La Mancha..."):
-                    resultado = encontrar_municipio_poligono_parcela(x, y)
-                    provincia_sel, municipio_sel, masa_sel, parcela_sel, parcela_gdf = resultado
-
-                    if provincia_sel != "Fuera de Castilla-La Mancha":
-                        st.success("¡Parcela encontrada!")
-                        st.write(f"**Provincia:** {provincia_sel}")
-                        st.write(f"**Municipio:** {municipio_sel}")
-                        st.write(f"**Polígono:** {masa_sel}")
-                        st.write(f"**Parcela:** {parcela_sel}")
-                        st.session_state.parcela_gdf = parcela_gdf  # Guardamos para el mapa y PDF
-                    else:
-                        st.warning("No se encontró ninguna parcela en las coordenadas indicadas.")
-                        provincia_sel = municipio_sel = masa_sel = parcela_sel = None
-                        parcela_gdf = None
-
-    else:  # modo == "Por parcela"
-        # Aquí va el bloque que ya te pasé antes (provincia → municipio → polígono → parcela)
-        provincia_sel = st.selectbox("Provincia", options=sorted(shp_urls.keys()))
-        municipios_prov = sorted(shp_urls[provincia_sel].keys())
-        municipio_sel = st.selectbox("Municipio", options=municipios_prov)
-
-        carpeta_mun = shp_urls[provincia_sel][municipio_sel]
-        with st.spinner(f"Descargando parcelario de {municipio_sel}..."):
-            gdf = cargar_shapefile_clm(provincia_sel, carpeta_mun)
-
-        if gdf is not None:
-            masa_sel = st.selectbox("Polígono", options=sorted(gdf["MASA"].astype(str).unique()))
-            parcelas_pol = sorted(gdf[gdf["MASA"] == masa_sel]["PARCELA"].astype(str).unique())
-            parcela_sel = st.selectbox("Parcela", options=parcelas_pol)
-
-            parcela_gdf = gdf[(gdf["MASA"] == masa_sel) & (gdf["PARCELA"] == parcela_sel)]
-
-            if not parcela_gdf.empty:
-                centroide = parcela_gdf.geometry.centroid.iloc[0]
-                x, y = centroide.x, centroide.y
-                st.session_state.parcela_gdf = parcela_gdf
-
-                st.success("¡Parcela seleccionada correctamente!")
-                st.info(f"Coordenadas centroide → X: {x:.2f} | Y: {y:.2f}")
-            else:
-                st.error("Error al seleccionar la parcela.")
-                x = y = 0.0
-        else:
-            st.error("No se pudo cargar el municipio.")
-            x = y = 0.0
+                st.warning("No se encontró una parcela para las coordenadas proporcionadas.")
+    else:
+        st.info(f"Coordenadas obtenidas del centroide de la parcela: X = {x}, Y = {y}")
         
     nombre = st.text_input("Nombre")
     apellidos = st.text_input("Apellidos")
