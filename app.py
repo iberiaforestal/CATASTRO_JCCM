@@ -998,24 +998,30 @@ def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
             return None
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
-def encontrar_municipio_poligono_parcela(x_ed50, y_ed50):
-    # Transformar de ED50 UTM 30N (23030) → ETRS89 UTM 30N (25830) para crear el punto
-    transformer = Transformer.from_crs("EPSG:23030", "EPSG:25830", always_xy=True)
-    x, y = transformer.transform(x_ed50, y_ed50)
-    
-    point = Point(x, y)  # Ahora sí está en el mismo CRS que los WFS oficiales
+def encontrar_municipio_poligono_parcela(x_25830, y_25830):
+    # Tolerancia de 10 cm → suficiente para cualquier error de redondeo
+    punto_buffer = Point(x_25830, y_25830).buffer(0.1)   # 10 cm
     
     for provincia, municipios in shp_urls.items():
         for municipio, carpeta in municipios.items():
             gdf = cargar_shapefile_clm(provincia, carpeta)
-            if gdf is not None and not gdf.empty:
-                # Forzar que el shapefile también esté en 25830 (por si acaso)
-                if gdf.crs != "EPSG:25830":
-                    gdf = gdf.to_crs("EPSG:25830")
+            if gdf is None or gdf.empty:
+                continue
                 
-                if gdf.geometry.contains(point).any():
-                    fila = gdf[gdf.geometry.contains(point)].iloc[0]
-                    return municipio, str(fila["MASA"]), str(fila["PARCELA"]), gdf[gdf.geometry.contains(point)]
+            # Forzamos CRS 25830 por si algún shp viene raro
+            if gdf.crs != "EPSG:25830":
+                gdf = gdf.to_crs("EPSG:25830")
+            
+            # intersects + buffer = nunca falla
+            coincidencias = gdf[gdf.geometry.intersects(punto_buffer)]
+            if not coincidencias.empty:
+                fila = coincidencias.iloc[0]
+                return (
+                    municipio,
+                    str(fila["MASA"]),
+                    str(fila["PARCELA"]),
+                    coincidencias
+                )
     return "N/A", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
