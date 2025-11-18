@@ -2581,8 +2581,8 @@ with st.form("formulario"):
             st.error("Coordenadas fuera del rango válido de Castilla-La Mancha (UTM Zona 30N).")
             st.stop()
 
-# === 4. DEFINIR query_geom (UNA VEZ) ===
-if modo == "Por parcela":
+    # === 4. DEFINIR query_geom (UNA VEZ) ===
+        if modo == "Por parcela":
             query_geom = parcela.geometry
         else:
             query_geom = Point(x, y)
