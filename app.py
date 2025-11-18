@@ -981,10 +981,10 @@ shp_urls = {
 # Función para cargar shapefiles desde GitHub
 @st.cache_data(ttl=86400, show_spinner=False)
 def cargar_shapefile_clm(provincia_folder, municipio_file):
-    base_url = f"https://raw.githubusercontent.com/iberiaforestal/AFECCIONES_JCCM/main/CATASTRO/{provincia}/"
+    base_url = f"https://raw.githubusercontent.com/iberiaforestal/AFECCIONES_JCCM/main/CATASTRO/{provincia_folder}/"
     exts = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
     
-with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory() as tmpdir:
         local_paths = {}
         for ext in exts:
             filename = municipio_file + ext
@@ -997,12 +997,12 @@ with tempfile.TemporaryDirectory() as tmpdir:
                     f.write(response.content)
                 local_paths[ext] = local_path
             except requests.exceptions.RequestException:
-                return None          
+                return None
+        
         try:
             gdf = gpd.read_file(local_paths[".shp"])
-            return gdf.to_crs(epsg=25830) 
-        except Exception as e:
-            # st.warning(f"Error leyendo {municipio_file}: {e}")  # Comentado para no asustar
+            return gdf.to_crs(epsg=25830)
+        except:
             return None
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
