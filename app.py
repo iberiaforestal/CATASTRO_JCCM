@@ -1003,7 +1003,7 @@ def cargar_shapefile_clm(provincia_folder, municipio_file):
        
         shp_path = local_paths[".shp"]
         try:
-            gdf = gpd.read_file(shp_path)
+            gdf = gpd.read_file(shp_path, encoding="cp1252")
             gdf = gdf.to_crs(epsg=25830)  # aseguramos ETRS89 UTM 30N
             return gdf
         except Exception as e:
