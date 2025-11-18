@@ -981,33 +981,40 @@ shp_urls = {
 # Función para cargar shapefiles desde GitHub
 @st.cache_data(ttl=86400, show_spinner=False)
 def cargar_shapefile_clm(provincia_folder, municipio_file):
-    base_url = base_url = f"https://raw.githubusercontent.com/iberiaforestal/CATASTRO_JCCM/master/CATASTRO/{provincia_folder}/"
-    exts = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
+    zip_url = f"https://github.com/iberiaforestal/CATASTRO_JCCM/raw/master/CATASTRO/{provincia_folder}/{municipio_file}.zip"
     
-    with tempfile.TemporaryDirectory() as tmpdir:
-        local_paths = {}
-        for ext in exts:
-            filename = municipio_file + ext
-            url = base_url + filename
-            try:
-                response = requests.get(url, timeout=100)
-                response.raise_for_status()
-            except requests.exceptions.RequestException as e:
-                st.error(f"Error al descargar {url}: {str(e)}")
-                return None
+    try:
+        with st.spinner(f"Descargando catastro de {municipio_file}..."):
+            response = session.get(zip_url, timeout=60)
+            response.raise_for_status()
             
-            local_path = os.path.join(tmpdir, filename)
-            with open(local_path, "wb") as f:
-                f.write(response.content)
-            local_paths[ext] = local_path
+            zip_bytes = BytesIO(response.content)
+            
+            with tempfile.TemporaryDirectory() as tmpdir:
+                with zipfile.ZipFile(zip_bytes) as z:
+                    z.extractall(tmpdir)
+                
+                # Buscar el .shp dentro de todo lo extraído
+                for root, dirs, files in os.walk(tmpdir):
+                    for file in files:
+                        if file.lower().endswith('.shp'):
+                            shp_path = os.path.join(root, file)
+                            gdf = gpd.read_file(shp_path)
+                            gdf = gdf.to_crs(epsg=25830)
+                            return gdf
+                            
+        st.error(f"No se encontró archivo .shp dentro del ZIP de {municipio_file}")
+        return None
         
-        shp_path = local_paths[".shp"]
-        try:
-            gdf = gpd.read_file(shp_path)
-            return gdf
-        except Exception as e:
-            st.error(f"Error al leer shapefile {shp_path}: {str(e)}")
-            return None
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            st.error(f"No existe la carpeta del municipio {municipio_file} en el repositorio.")
+        else:
+            st.error(f"Error HTTP al descargar {municipio_file}: {e}")
+        return None
+    except Exception as e:
+        st.error(f"Error inesperado cargando {municipio_file}: {str(e)}")
+        return None
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
 def encontrar_municipio_poligono_parcela(x, y):
