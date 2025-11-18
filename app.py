@@ -2534,12 +2534,17 @@ if modo == "Por parcela":
 
 with st.form("formulario"):
     if modo == "Por coordenadas":
-        x = st.number_input("Coordenada X (ETRS89 UTM Zona 30)", format="%.2f", 
-                           help="Introduce coordenadas en metros, sistema ETRS89 / UTM zona 30N (EPSG:25830)")
-        y = st.number_input("Coordenada Y (ETRS89 UTM Zona 30)", format="%.2f")
+        x = st.number_input(
+            "Coordenada X (ETRS89 UTM Zona 30)", 
+            format="%.2f", 
+            help="Introduce coordenadas en metros, sistema ETRS89 / UTM zona 30N (EPSG:25830)"
+        )
+        y = st.number_input(
+            "Coordenada Y (ETRS89 UTM Zona 30)", 
+            format="%.2f"
+        )
 
         if x != 0.0 and y != 0.0:
-            # Comprobación estricta como en carm.py
             if not (200000 <= x <= 800000 and 3900000 <= y <= 4800000):
                 st.error("Coordenadas fuera del rango de Castilla-La Mancha en UTM Zona 30N. Revise los valores.")
             else:
@@ -2552,7 +2557,7 @@ with st.form("formulario"):
                 else:
                     st.warning("No se encontró ninguna parcela catastral en ese punto.")
 
-    # Campos comunes (siempre dentro del formulario)
+    # Campos que aparecen siempre (tanto en "Por coordenadas" como en "Por parcela")
     nombre = st.text_input("Nombre")
     apellidos = st.text_input("Apellidos")
     dni = st.text_input("DNI")
@@ -2560,6 +2565,7 @@ with st.form("formulario"):
     telefono = st.text_input("Teléfono")
     email = st.text_input("Correo electrónico")
     objeto = st.text_area("Objeto de la solicitud", max_chars=255)
+    
     submitted = st.form_submit_button("Generar informe")
 
 if 'mapa_html' not in st.session_state:
