@@ -21,8 +21,8 @@ from urllib3.util.retry import Retry
 import shutil
 from PIL import Image
 def normalize_name(name):
+    # Mantener espacios intactos
     name = name.upper()\
-               .replace(" ", "_")\
                .replace("Á", "A")\
                .replace("É", "E")\
                .replace("Í", "I")\
@@ -31,16 +31,9 @@ def normalize_name(name):
                .replace("Ñ", "N")\
                .replace("Ü", "U")\
                .replace("º", "")\
-               .replace("ª", "")\
-               .replace("-", "_")\
-               .replace("(", "")\
-               .replace(")", "")
+               .replace("ª", "")
 
-    # EXCEPCIÓN ESPECIAL: en GitHub la carpeta es "CIUDAD REAL" (con espacio), no con _
-    if name == "CIUDAD_REAL":
-        return "CIUDAD REAL"
-    
-    return name
+    return name.strip()
     
 
 # Sesión segura con reintentos
