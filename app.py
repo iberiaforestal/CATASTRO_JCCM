@@ -1017,15 +1017,21 @@ def encontrar_municipio_poligono_parcela(x, y):
         punto = Point(x, y)
         for provincia, municipios_file in shp_urls.items():
             for municipio_display in municipios_file.keys():
-                provincia_folder = normalize_name(provincia)
-                municipio_file = normalize_name(municipio_display)
+
+                # 🟢 NO normalizar. Tomar los nombres EXACTOS.
+                provincia_folder = provincia
+                municipio_file = municipio_display
+
                 gdf = cargar_shapefile_clm(provincia_folder, municipio_file)
                 if gdf is None or gdf.empty:
                     continue
+
                 if gdf.contains(punto).any():
                     fila = gdf[gdf.contains(punto)].iloc[0]
                     return municipio_display, provincia, str(fila["MASA"]), str(fila["PARCELA"]), gdf[gdf.contains(punto)]
+
         return "N/A", "N/A", "N/A", "N/A", None
+
     except Exception as e:
         st.error(f"Error buscando parcela: {e}")
         return "N/A", "N/A", "N/A", "N/A", None
