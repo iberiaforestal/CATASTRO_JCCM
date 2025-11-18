@@ -1009,28 +1009,19 @@ def cargar_shapefile_clm(provincia_folder, municipio_file):
 def encontrar_municipio_poligono_parcela(x, y):
     try:
         punto = Point(x, y)
-        
         for provincia, municipios_dict in shp_urls.items():
-            for municipio_display in municipios_dict.keys():  # nombre bonito para mostrar
-                # Normalizamos para coincidir con los archivos reales en GitHub
-                provincia_folder = normalize_name(provincia_sel)
-                municipio_file = normalize_name(municipio_sel)
+            for municipio_display in municipios_dict.keys():
+                provincia_folder = normalize_name(provincia)
+                municipio_file = normalize_name(municipio_display)
                 gdf = cargar_shapefile_clm(provincia_folder, municipio_file)
                 if gdf is None or gdf.empty:
                     continue
-                    
-                seleccion = gdf[gdf.contains(punto)]
-                if not seleccion.empty:
-                    fila = seleccion.iloc[0]
-                    masa = str(fila["MASA"])
-                    parcela = str(fila["PARCELA"])
-                    return municipio_display, provincia, masa, parcela, seleccion
-        
-        # Si no encontró nada en ningún municipio
+                if gdf.contains(punto).any():
+                    fila = gdf[gdf.contains(punto)].iloc[0]
+                    return municipio_display, provincia, str(fila["MASA"]), str(fila["PARCELA"]), gdf[gdf.contains(punto)]
         return "N/A", "N/A", "N/A", "N/A", None
-    
     except Exception as e:
-        st.error(f"Error al buscar parcela: {str(e)}")
+        st.error(f"Error buscando parcela: {e}")
         return "N/A", "N/A", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
@@ -2518,10 +2509,9 @@ if modo == "Por parcela":
     municipios_de_provincia = sorted(shp_urls[provincia_sel].keys())
     municipio_sel = st.selectbox("Municipio", options=municipios_de_provincia)
     
-    # Normalizamos nombres para coincidir con los archivos reales en GitHub
+    # ← AQUÍ ESTÁ LA CLAVE
     provincia_folder = normalize_name(provincia_sel)
     municipio_file = normalize_name(municipio_sel)
-    
     gdf = cargar_shapefile_clm(provincia_folder, municipio_file)
     
     if gdf is not None and not gdf.empty:
@@ -2534,11 +2524,9 @@ if modo == "Por parcela":
             parcela = seleccion.iloc[0]
             x = parcela.geometry.centroid.x
             y = parcela.geometry.centroid.y
-            st.success("Parcela cargada correctamente.")
-            st.write(f"Provincia: {provincia_sel} | Municipio: {municipio_sel} | Polígono: {masa_sel} | Parcela: {parcela_sel}")
+            st.success(f"Parcela cargada → {provincia_sel} | {municipio_sel} | Pol. {masa_sel} | Parc. {parcela_sel}")
         else:
-            st.error("No se encontró la parcela seleccionada.")
-            parcela = None
+            st.error("Error interno al cargar la geometría.")
             x = y = 0.0
     else:
         st.error(f"No se pudo cargar el catastro de {municipio_sel} ({provincia_sel}).")
