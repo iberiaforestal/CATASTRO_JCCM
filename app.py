@@ -1008,12 +1008,13 @@ def cargar_shapefile_clm(provincia_folder, municipio_file):
         except Exception as e:
             st.error(f"Error al leer shapefile {shp_path}: {str(e)}")
             return None
+            
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
 def encontrar_municipio_poligono_parcela(x, y):
     try:
         punto = Point(x, y)
-        for provincia, municipios_dict in shp_urls.items():
-            for municipio_display in municipios_dict.keys():
+        for provincia, municipios_file in shp_urls.items():
+            for municipio_display in municipios_file.keys():
                 provincia_folder = normalize_name(provincia)
                 municipio_file = normalize_name(municipio_display)
                 gdf = cargar_shapefile_clm(provincia_folder, municipio_file)
