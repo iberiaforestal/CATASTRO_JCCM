@@ -1011,29 +1011,52 @@ def cargar_shapefile_clm(provincia_folder, municipio_file):
             return None
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
-def encontrar_municipio_poligono_parcela(x, y):
+@st.cache_data(ttl=86400, show_spinner=False)
+def obtener_provincia_por_coordenadas(x, y):
+    punto = Point(x, y)
+    url_provincias = "https://raw.githubusercontent.com/iberiaforestal/CATASTRO_JCCM/master/JCCM.json"
+    
     try:
-        punto = Point(x, y)
-        for provincia, municipios_file in shp_urls.items():
-            for municipio_display in municipios_file.keys():
+        gdf_prov = gpd.read_file(url_provincias)
+        gdf_prov = gdf_prov.to_crs(epsg=25830)
+        for idx, row in gdf_prov.iterrows():
+            if row.geometry.contains(punto):
+                return row['provincia']
+        return "N/A"                               # punto fuera de CLM
+    except Exception:
+        st.warning("Límites provinciales no disponibles → usando búsqueda completa (más lenta)", icon="Warning")
+        return None                                    # ← CLAVE: devolvemos None
 
-                # 🟢 NO normalizar. Tomar los nombres EXACTOS.
-                provincia_folder = provincia
-                municipio_file = municipio_display
 
-                gdf = cargar_shapefile_clm(provincia_folder, municipio_file)
-                if gdf is None or gdf.empty:
-                    continue
-
+def encontrar_municipio_poligono_parcela(x, y):
+    punto = Point(x, y)
+    
+    # 1º Intentamos detectar provincia rapidísimo
+    provincia = obtener_provincia_por_coordenadas(x, y)
+    
+    # Si conseguimos provincia válida → solo buscamos ahí
+    if provincia and provincia in shp_urls:
+        municipios_a_buscar = [provincia]
+    else:
+        # Si falla el JSON o punto fuera → búsqueda completa (método lento pero seguro
+        municipios_a_buscar = shp_urls.keys()
+    
+    # 2º Búsqueda (rápida si hay provincia, lenta solo como fallback)
+    for prov in municipios_a_buscar:
+        for municipio_display, municipio_file in shp_urls[prov].items():
+            gdf = cargar_shapefile_clm(prov, municipio_file)
+            if gdf is not None and not gdf.empty:
                 if gdf.contains(punto).any():
                     fila = gdf[gdf.contains(punto)].iloc[0]
-                    return municipio_display, provincia, str(fila["MASA"]), str(fila["PARCELA"]), gdf[gdf.contains(punto)]
-
-        return "N/A", "N/A", "N/A", "N/A", None
-
-    except Exception as e:
-        st.error(f"Error buscando parcela: {e}")
-        return "N/A", "N/A", "N/A", "N/A", None
+                    return (
+                        municipio_display,
+                        prov,
+                        str(fila.get("MASA", "N/A")),
+                        str(fila.get("PARCELA", "N/A")),
+                        gdf[gdf.contains(punto)]
+                    )
+    
+    return "N/A", "N/A", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
 def transformar_coordenadas(x, y):
