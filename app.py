@@ -2565,6 +2565,7 @@ with st.form("formulario"):
     telefono = st.text_input("Teléfono")
     email = st.text_input("Correo electrónico")
     objeto = st.text_area("Objeto de la solicitud", max_chars=255)
+    
     submitted = st.form_submit_button("Generar informe")
 
 if 'mapa_html' not in st.session_state:
