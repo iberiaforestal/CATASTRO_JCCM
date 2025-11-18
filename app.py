@@ -1374,6 +1374,10 @@ def generar_pdf(datos, x, y, filename):
 
     def seccion_titulo(texto):
         pdf.set_fill_color(*azul_rgb)
+        ancho_deseado = 190
+        x = (pdf.w - ancho_deseado) / 2
+        pdf.cell(ancho_deseado, 10, "", ln=False, fill=True)
+        pdf.set_x(x)
         pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", 13)
         pdf.cell(0, 10, texto, ln=True, fill=True)
@@ -1667,7 +1671,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afección a Planeamiento Urbano (PGOU):", ln=True)
         pdf.ln(2)
         col_w_uso = 50
-        col_w_clas = pdf.w - 2 * pdf.l_margin - col_w_uso
+        col_w_clas = 190 - col_w_uso
         row_height = 5
         pdf.set_font("Arial", "B", 11)
         pdf.set_fill_color(*azul_rgb)
@@ -1866,7 +1870,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afecciones a Zonas de Especial Protección para las Aves (ZEPA):", ln=True)
         pdf.ln(2)
         col_w_code = 30
-        col_w_name = pdf.w - 2 * pdf.l_margin - col_w_code
+        col_w_name = 190 - col_w_code
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -1904,7 +1908,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afecciones a Lugares de Importancia Comunitaria (LIC):", ln=True)
         pdf.ln(2)
         col_w_code = 30
-        col_w_name = pdf.w - 2 * pdf.l_margin - col_w_code
+        col_w_name = 190 - col_w_code
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -1944,8 +1948,8 @@ def generar_pdf(datos, x, y, filename):
         pdf.ln(2)
 
         # --- ANCHO TOTAL DISPONIBLE ---
-        page_width = pdf.w - 2 * pdf.l_margin
-        col_widths = [page_width * 0.45, page_width * 0.55]  # 45% | 55%
+        ancho_total = 190
+        col_widths = [ancho_total * 0.45, ancho_total * 0.55]
         line_height = 5
 
         # --- CABECERA ---
@@ -1996,7 +2000,7 @@ def generar_pdf(datos, x, y, filename):
 
         col_cuad = 35
         col_esp  = 50
-        col_nom  = pdf.w - 2 * pdf.l_margin - col_cuad - col_esp
+        col_nom  = 190 - col_cuad - col_esp
         line_height = 5
 
         # --- CABECERA ---
@@ -2053,7 +2057,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afección a Plan de Recuperación tortuga mora:", ln=True)
         pdf.ln(2)
         col_w_cat_id = 50
-        col_w_cat_desc = pdf.w - 2 * pdf.l_margin - col_w_cat_id
+        col_w_cat_desc = 190 - col_w_cat_id
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -2091,7 +2095,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afección a Plan de Recuperación águila perdicera:", ln=True)
         pdf.ln(2)
         col_w_zona = 50
-        col_w_nombre = pdf.w - 2 * pdf.l_margin - col_w_zona
+        col_w_nombre = 190 - col_w_zona
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -2129,7 +2133,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afección a Plan de Recuperación nutria:", ln=True)
         pdf.ln(2)
         col_w_tipo_de_ar = 50
-        col_w_nombre = pdf.w - 2 * pdf.l_margin - col_w_tipo_de_ar
+        col_w_nombre = 190 - col_w_tipo_de_ar
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -2167,7 +2171,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afección a Plan de Recuperación fartet:", ln=True)
         pdf.ln(2)
         col_w_clasificac = 50
-        col_w_nombre = pdf.w - 2 * pdf.l_margin - col_w_clasificac
+        col_w_nombre = 190 - col_w_clasificac
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -2205,7 +2209,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afección a Plan de Recuperación malvasia:", ln=True)
         pdf.ln(2)
         col_w_clasificac = 50
-        col_w_nombre = pdf.w - 2 * pdf.l_margin - col_w_clasificac
+        col_w_nombre = 190 - col_w_clasificac
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -2243,7 +2247,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afección a Plan de Recuperación garbancillo:", ln=True)
         pdf.ln(2)
         col_w_tipo = 50
-        col_w_nombre = pdf.w - 2 * pdf.l_margin - col_w_tipo
+        col_w_nombre = 190 - col_w_tipo
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -2281,7 +2285,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afección a Plan de Recuperación flora:", ln=True)
         pdf.ln(2)
         col_w_tipo = 50
-        col_w_nombre = pdf.w - 2 * pdf.l_margin - col_w_tipo
+        col_w_nombre = 190 - col_w_tipo
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -2343,7 +2347,7 @@ def generar_pdf(datos, x, y, filename):
     espacio_entre = 2
     x_codigo = margin
     x_texto = margin + codigo_width + espacio_entre
-    ancho_texto = pdf.w - x_texto - margin
+    ancho_texto = 190
 
     # Medir cuadro rojo
     lineas_rojo = len(pdf.multi_cell(pdf.w - 2*margin, 5, texto_rojo, border=0, align="J", split_only=True))
@@ -2378,13 +2382,13 @@ def generar_pdf(datos, x, y, filename):
     pdf.set_draw_color(0, 0, 0)
     pdf.set_line_width(0.5)
     pdf.set_fill_color(251, 228, 213)
-    pdf.multi_cell(pdf.w - 2*margin, 5, texto_rojo, border=1, align="J", fill=True)
+    pdf.multi_cell(190, 5, texto_rojo, border=1, align="J", fill=True)
     pdf.ln(2)
 
     # --- TEXTO EN NEGRITA ---
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", 8)
-    pdf.multi_cell(pdf.w - 2*margin, 5, texto_resto, border=0, align="J")
+    pdf.multi_cell(190, 5, texto_resto, border=0, align="J")
     pdf.ln(2)
 
     # --- PROCEDIMIENTOS ---
@@ -2413,6 +2417,17 @@ def generar_pdf(datos, x, y, filename):
         y += altura_linea
 
     pdf.ln(espacio_final)
+
+        # Volver a negrita para el resto del texto
+    pdf.set_font("Arial", "B", 9)  # Restaurar negrita
+    texto_final = (
+        "\nDe acuerdo con lo establecido en el artículo 22 de la ley 43/2003 de 21 de noviembre de Montes, toda inmatriculación o inscripción de exceso de cabida en el Registro de la Propiedad de un monte o de una finca colindante con monte demanial o ubicado en un término municipal en el que existan montes demaniales requerirá el previo informe favorable de los titulares de dichos montes y, para los montes catalogados, el del órgano forestal de la comunidad autónoma.\n\n"
+        "En cuanto a vías pecuarias, salvaguardando lo que pudiera resultar de los futuros deslindes, en las parcelas objeto este informe-borrador, cualquier construcción, plantación, vallado, obras, instalaciones, etc., no deberían realizarse dentro del área delimitada como dominio público pecuario provisional para evitar invadir éste.\n\n"
+        "En todo caso, no podrá interrumpirse el tránsito por las Vías Pecuarias, dejando siempre el paso adecuado para el tránsito ganadero y otros usos legalmente establecidos en la Ley 3/1995, de 23 de marzo, de Vías Pecuarias."
+    )
+    pdf.multi_cell(pdf.w - 2 * pdf.l_margin, 5, texto_final, border=0, align="J")
+    pdf.ln(2)
+
     
     # === CONDICIONADO:===
     pdf.add_page()  # Nueva página
