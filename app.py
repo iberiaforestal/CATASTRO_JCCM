@@ -2557,16 +2557,15 @@ with st.form("formulario"):
                 else:
                     st.warning("No se encontró ninguna parcela catastral en ese punto.")
 
-    # Campos que aparecen siempre (tanto en "Por coordenadas" como en "Por parcela")
-    nombre = st.text_input("Nombre")
-    apellidos = st.text_input("Apellidos")
-    dni = st.text_input("DNI")
-    direccion = st.text_input("Dirección")
-    telefono = st.text_input("Teléfono")
-    email = st.text_input("Correo electrónico")
-    objeto = st.text_area("Objeto de la solicitud", max_chars=255)
-    
-    submitted = st.form_submit_button("Generar informe")
+            # Campos que aparecen siempre (tanto en "Por coordenadas" como en "Por parcela")
+            nombre = st.text_input("Nombre")
+            apellidos = st.text_input("Apellidos")
+            dni = st.text_input("DNI")
+            direccion = st.text_input("Dirección")
+            telefono = st.text_input("Teléfono")
+            email = st.text_input("Correo electrónico")
+            objeto = st.text_area("Objeto de la solicitud", max_chars=255)
+            submitted = st.form_submit_button("Generar informe")
 
 if 'mapa_html' not in st.session_state:
     st.session_state['mapa_html'] = None
