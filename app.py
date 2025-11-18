@@ -2490,14 +2490,15 @@ st.image(
 )
 st.title("Informe basico de Afecciones al medio")
 
-modo = st.radio("Seleccione el modo de búsqueda. Recuerde que la busqueda por parcela analiza afecciones al total de la superficie de la parcela, por el contrario la busqueda por coodenadas analiza las afecciones del punto", ["Por coordenadas", "Por parcela"])
+modo = st.radio(
+    "Seleccione el modo de búsqueda. Recuerde que la búsqueda por parcela analiza afecciones al total de la superficie de la parcela, "
+    "por el contrario la búsqueda por coordenadas analiza las afecciones del punto",
+    ["Por coordenadas", "Por parcela"]
+)
 
-x = 0.0
-y = 0.0
-provincia_sel = ""
-municipio_sel = ""
-masa_sel = ""
-parcela_sel = ""
+# Variables globales para usar después
+x = y = 0.0
+municipio_sel = provincia_sel = masa_sel = parcela_sel = ""
 parcela = None
 
 if modo == "Por parcela":
@@ -2518,15 +2519,13 @@ if modo == "Por parcela":
             parcela = seleccion.iloc[0]
             x = parcela.geometry.centroid.x
             y = parcela.geometry.centroid.y
-            
             st.success("Parcela cargada correctamente.")
             st.write(f"Provincia: {provincia_sel}")
             st.write(f"Municipio: {municipio_sel}")
             st.write(f"Polígono: {masa_sel}")
             st.write(f"Parcela: {parcela_sel}")
         else:
-            st.error("Error interno al cargar la geometría de la parcela.")
-            parcela = None
+            st.error("Error interno al cargar la geometría.")
             x = y = 0.0
     else:
         st.error("No se pudo cargar el catastro de este municipio.")
@@ -2534,22 +2533,15 @@ if modo == "Por parcela":
 
 with st.form("formulario"):
     if modo == "Por coordenadas":
-        x = st.number_input(
-            "Coordenada X (ETRS89 UTM Zona 30)", 
-            format="%.2f", 
-            help="Introduce coordenadas en metros, sistema ETRS89 / UTM zona 30N (EPSG:25830)"
-        )
-        y = st.number_input(
-            "Coordenada Y (ETRS89 UTM Zona 30)", 
-            format="%.2f"
-        )
+        x = st.number_input("Coordenada X (ETRS89 UTM Zona 30)", format="%.2f",
+                           help="Introduce coordenadas en metros, sistema ETRS89 / UTM zona 30N (EPSG:25830)")
+        y = st.number_input("Coordenada Y (ETRS89 UTM Zona 30)", format="%.2f")
 
         if x != 0.0 and y != 0.0:
             if not (200000 <= x <= 800000 and 3900000 <= y <= 4800000):
                 st.error("Coordenadas fuera del rango de Castilla-La Mancha en UTM Zona 30N. Revise los valores.")
             else:
-                municipio_encontrado, provincia_encontrada, masa_sel, parcela_sel, parcela_gdf = encontrar_municipio_poligono_parcela(x, y)
-                
+                municipio_encontrado, provincia_encontrada, masa_sel, parcela_sel, _ = encontrar_municipio_poligono_parcela(x, y)
                 if municipio_encontrado != "N/A":
                     municipio_sel = municipio_encontrado
                     provincia_sel = provincia_encontrada
@@ -2557,7 +2549,6 @@ with st.form("formulario"):
                 else:
                     st.warning("No se encontró ninguna parcela catastral en ese punto.")
 
-    # Campos que aparecen siempre (tanto en "Por coordenadas" como en "Por parcela")
     nombre = st.text_input("Nombre")
     apellidos = st.text_input("Apellidos")
     dni = st.text_input("DNI")
@@ -2567,15 +2558,7 @@ with st.form("formulario"):
     objeto = st.text_area("Objeto de la solicitud", max_chars=255)
     
     submitted = st.form_submit_button("Generar informe")
-
-if 'mapa_html' not in st.session_state:
-    st.session_state['mapa_html'] = None
-if 'pdf_file' not in st.session_state:
-    st.session_state['pdf_file'] = None
-if 'afecciones' not in st.session_state:
-    st.session_state['afecciones'] = []
-
-if submitted:
+    
 # === 1. LIMPIAR ARCHIVOS DE BÚSQUEDAS ANTERIORES ===
     for key in ['mapa_html', 'pdf_file']:
         if key in st.session_state and st.session_state[key]:
