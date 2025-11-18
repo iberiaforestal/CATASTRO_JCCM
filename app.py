@@ -981,7 +981,7 @@ shp_urls = {
 # Función para cargar shapefiles desde GitHub
 @st.cache_data(ttl=86400, show_spinner=False)
 def cargar_shapefile_clm(provincia_folder, municipio_file):
-    base_url = f"https://raw.githubusercontent.com/iberiaforestal/AFECCIONES_JCCM/master/CATASTRO/{provincia_folder}/"
+    base_url = base_url = f"https://raw.githubusercontent.com/iberiaforestal/CATASTRO_JCCM/master/CATASTRO/{provincia_folder}/"
     exts = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
     
     with tempfile.TemporaryDirectory() as tmpdir:
