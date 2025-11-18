@@ -1368,7 +1368,7 @@ def generar_pdf(datos, x, y, filename):
     for line in wrapped_objeto:
         pdf.cell(0, 7, line, ln=1)
         
-    seccion_titulo("2. Localización")
+    seccion_titulo("2. Localización") 
     for campo in ["provincia", "municipio", "polígono", "parcela"]:
         valor = datos.get(campo, "").strip()
         campo_orden(pdf, campo.capitalize(), valor if valor else "No disponible")
