@@ -996,12 +996,14 @@ def cargar_shapefile_clm(provincia_folder, municipio_file):
                 with open(local_path, "wb") as f:
                     f.write(response.content)
                 local_paths[ext] = local_path
-            except requests.exceptions.RequestException:
-                return None  # Si falta cualquier archivo, devolvemos None
+            except:
+                return None
         
         try:
             gdf = gpd.read_file(local_paths[".shp"])
-            return gdf.to_crs(epsg=25830)
+            if gdf.empty:
+                return None
+            return gdf.to_crs("EPSG:25830")
         except:
             return None
             
@@ -2509,12 +2511,13 @@ if modo == "Por parcela":
     municipios_de_provincia = sorted(shp_urls[provincia_sel].keys())
     municipio_sel = st.selectbox("Municipio", options=municipios_de_provincia)
     
-    # ← AQUÍ ESTÁ LA CLAVE
-    provincia_folder = normalize_name(provincia_sel)
-    municipio_file = normalize_name(municipio_sel)
-    gdf = cargar_shapefile_clm(provincia_folder, municipio_file)
+    with st.spinner(f"Cargando catastro de {municipio_sel}..."):
+        provincia_folder = normalize_name(provincia_sel)
+        municipio_file = normalize_name(municipio_sel)
+        gdf = cargar_shapefile_clm(provincia_folder, municipio_file)
     
     if gdf is not None and not gdf.empty:
+        st.success(f"Catastro cargado: {len(gdf)} parcelas encontradas")
         masa_sel = st.selectbox("Polígono", options=sorted(gdf["MASA"].astype(str).unique()))
         parcelas_pol = gdf[gdf["MASA"] == masa_sel]
         parcela_sel = st.selectbox("Parcela", options=sorted(parcelas_pol["PARCELA"].astype(str).unique()))
@@ -2524,12 +2527,12 @@ if modo == "Por parcela":
             parcela = seleccion.iloc[0]
             x = parcela.geometry.centroid.x
             y = parcela.geometry.centroid.y
-            st.success(f"Parcela cargada → {provincia_sel} | {municipio_sel} | Pol. {masa_sel} | Parc. {parcela_sel}")
+            st.success(f"Parcela {parcela_sel} cargada correctamente")
         else:
-            st.error("Error interno al cargar la geometría.")
+            st.error("Error al cargar geometría")
             x = y = 0.0
     else:
-        st.error(f"No se pudo cargar el catastro de {municipio_sel} ({provincia_sel}).")
+        st.error(f"No se encontró el catastro de {municipio_sel} ({provincia_folder}/{municipio_file})")
         x = y = 0.0
         
 with st.form("formulario"):
