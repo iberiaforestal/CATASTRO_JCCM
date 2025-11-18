@@ -965,62 +965,61 @@ shp_urls = {
 }
 
 # Función para cargar shapefiles desde GitHub
-@st.cache_data(ttl=3600)
-def cargar_shapefile_clm(provincia, nombre_carpeta_municipio):
-    base_url = "https://raw.githubusercontent.com/iberiaforestal/CATASTRO_JCCM/master/CATASTRO/"
+@st.cache_data
+def cargar_shapefile_clm(provincia, base_name):
+    base_url = f"https://raw.githubusercontent.com/iberiaforestal/AFECCIONES_JCCM/main/CATASTRO/{provincia}/"
     exts = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
     
     with tempfile.TemporaryDirectory() as tmpdir:
         local_paths = {}
         for ext in exts:
-            filename = f"{nombre_carpeta_municipio}{ext}"
-            url = f"{base_url}{provincia}/{nombre_carpeta_municipio}/{filename}"
-            
+            filename = base_name + ext
+            url = base_url + filename
             try:
                 response = requests.get(url, timeout=100)
                 response.raise_for_status()
-            except requests.exceptions.RequestException as e:
-                st.error(f"Error al descargar {url}: {str(e)}")
-                return None
+            except requests.exceptions.RequestException:
+                return None  # Silencioso si no existe
             
             local_path = os.path.join(tmpdir, filename)
             with open(local_path, "wb") as f:
                 f.write(response.content)
             local_paths[ext] = local_path
-
-        shp_path = local_paths[".shp"]
         
+        shp_path = local_paths[".shp"]
         try:
             gdf = gpd.read_file(shp_path)
             return gdf
-        except Exception as e:
-            st.error(f"Error leyendo shapefile de {nombre_carpeta_municipio}: {e}")
+        except:
             return None
             
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
 def encontrar_municipio_poligono_parcela(x, y):
-
-    punto_buffer = Point(x, y).buffer(0.15)  # 15 cm de tolerancia (más que suficiente)
+    try:
+        punto = Point(x, y)
+        
+        # Recorremos todas las provincias
+        for provincia, municipios_dict in shp_urls.items():
+            # Recorremos todos los municipios de esa provincia
+            for municipio_display, base_name in municipios_dict.items():
+                gdf = cargar_shapefile_clm(provincia, base_name)  # <-- función que ya tienes
+                if gdf is None or gdf.empty:
+                    continue
+                    
+                # Verificamos si el punto cae dentro de alguna parcela
+                seleccion = gdf[gdf.contains(punto)]
+                if not seleccion.empty:
+                    fila = seleccion.iloc[0]
+                    masa = str(fila["MASA"])
+                    parcela = str(fila["PARCELA"])
+                    return municipio_display, provincia, masa, parcela, seleccion  # ← 5 valores
+        
+        # Si no encontró nada
+        return "N/A", "N/A", "N/A", "N/A", None
     
-    for provincia, municipios in shp_urls.items():
-        for municipio, carpeta in municipios.items():
-            gdf = cargar_shapefile_clm(provincia, carpeta)
-            if gdf is None or gdf.empty:
-                continue
-                
-            # Forzamos CRS por si acaso
-            if gdf.crs != "EPSG:25830":
-                gdf = gdf.to_crs("EPSG:25830")
-                
-            # Buscamos intersección con buffer
-            mask = gdf.geometry.intersects(punto_buffer)
-            if mask.any():
-                fila = gdf[mask].iloc[0]
-                masa = str(fila["MASA"]) if "MASA" in fila else "N/A"
-                parc = str(fila["PARCELA"]) if "PARCELA" in fila else "N/A"
-                return municipio, masa, parc, gdf[mask]
-                
-    return "N/A", "N/A", "N/A", None
+    except Exception as e:
+        st.error(f"Error al buscar parcela: {str(e)}")
+        return "N/A", "N/A", "N/A", "N/A", None
 
 # Función para transformar coordenadas de ETRS89 a WGS84
 def transformar_coordenadas(x, y):
@@ -1371,7 +1370,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 7, line, ln=1)
         
     seccion_titulo("2. Localización")
-    for campo in ["municipio", "polígono", "parcela"]:
+    for campo in ["provincia", "municipio", "polígono", "parcela"]:
         valor = datos.get(campo, "").strip()
         campo_orden(pdf, campo.capitalize(), valor if valor else "No disponible")
 
@@ -2506,77 +2505,53 @@ if modo == "Por parcela":
     municipios_de_provincia = sorted(shp_urls[provincia_sel].keys())
     municipio_sel = st.selectbox("Municipio", options=municipios_de_provincia)
     
-    carpeta_municipio = shp_urls[provincia_sel][municipio_sel]
-    gdf = cargar_shapefile_clm(provincia_sel, carpeta_municipio)     
+    base_name = shp_urls[provincia_sel][municipio_sel]
+    gdf = cargar_shapefile_clm(provincia_sel, base_name)
     
     if gdf is not None and not gdf.empty:
-        # Seleccionamos polígono
         masa_sel = st.selectbox("Polígono", options=sorted(gdf["MASA"].astype(str).unique()))
+        parcelas_pol = gdf[gdf["MASA"] == masa_sel]
+        parcela_sel = st.selectbox("Parcela", options=sorted(parcelas_pol["PARCELA"].astype(str).unique()))
         
-        # Filtramos parcelas del polígono seleccionado
-        parcelas_del_poligono = gdf[gdf["MASA"] == masa_sel]
-        opciones_parcelas = sorted(parcelas_del_poligono["PARCELA"].astype(str).unique())
-        parcela_sel = st.selectbox("Parcela", options=opciones_parcelas)
-        
-        # === OBTENEMOS LA GEOMETRÍA REAL DE LA PARCELA SELECCIONADA ===
-        fila_parcela = parcelas_del_poligono[parcelas_del_poligono["PARCELA"] == parcela_sel]
-        
-        if not fila_parcela.empty:
-            parcela = fila_parcela.iloc[0]                    # ← fila completa (GeoSeries)
-            if parcela.geometry is not None and parcela.geometry.type in ['Polygon', 'MultiPolygon']:
-                centroide = parcela.geometry.centroid
-                x = centroide.x
-                y = centroide.y
-                st.success("Parcela cargada correctamente.")
-                st.write(f"Municipio: {municipio_sel}")
-                st.write(f"Polígono: {masa_sel}")
-                st.write(f"Parcela: {parcela_sel}")
-            else:
-                st.error("La geometría de la parcela no es válida.")
-                parcela = None
-                x = y = 0.0
+        seleccion = parcelas_pol[parcelas_pol["PARCELA"] == parcela_sel]
+        if not seleccion.empty:
+            parcela = seleccion.iloc[0]
+            x = parcela.geometry.centroid.x
+            y = parcela.geometry.centroid.y
+            
+            st.success("Parcela cargada correctamente.")
+            st.write(f"Provincia: {provincia_sel}")
+            st.write(f"Municipio: {municipio_sel}")
+            st.write(f"Polígono: {masa_sel}")
+            st.write(f"Parcela: {parcela_sel}")
         else:
-            st.error("No se encontró la parcela seleccionada.")
+            st.error("Error interno al cargar la geometría de la parcela.")
             parcela = None
             x = y = 0.0
     else:
-        st.error(f"No se pudo cargar el shapefile del municipio {municipio_sel}")
-        parcela = None
+        st.error("No se pudo cargar el catastro de este municipio.")
         x = y = 0.0
-        gdf = None
 
 with st.form("formulario"):
 
-    if modo == "Por coordenadas":
+if modo == "Por coordenadas":
+    x = st.number_input("Coordenada X (ETRS89 UTM Zona 30)", format="%.2f", 
+                       help="Introduce coordenadas en metros, sistema ETRS89 / UTM zona 30N (EPSG:25830)")
+    y = st.number_input("Coordenada Y (ETRS89 UTM Zona 30)", format="%.2f")
 
-        x = st.number_input("Coordenada X (UTM ETRS89 o lon WGS84)", format="%.6f")
-        y = st.number_input("Coordenada Y (UTM ETRS89 o lat WGS84)", format="%.6f")
-
-        if x != 0.0 or y != 0.0:
-
-            # PASO 2 — Usamos la función del PASO 1
-            utm_x, utm_y, tipo_coord = interpretar_coordenadas(x, y)
-
-            if tipo_coord == "INVALIDO":
-                st.error("Coordenadas no válidas: introduce lon/lat (WGS84) o UTM (ETRS89).")
-
+    if x != 0.0 and y != 0.0:
+        # Comprobación estricta como en carm.py
+        if not (200000 <= x <= 800000 and 3900000 <= y <= 4800000):
+            st.error("Coordenadas fuera del rango de Castilla-La Mancha en UTM Zona 30N. Revise los valores.")
+        else:
+            municipio_encontrado, provincia_encontrada, masa_sel, parcela_sel, parcela_gdf = encontrar_municipio_poligono_parcela(x, y)
+            
+            if municipio_encontrado != "N/A":
+                municipio_sel = municipio_encontrado
+                provincia_sel = provincia_encontrada  # ¡¡IMPORTANTE!! ahora sí tendremos provincia
+                st.success(f"Parcela encontrada → Provincia: {provincia_sel} | Municipio: {municipio_sel} | Polígono: {masa_sel} | Parcela {parcela_sel}")
             else:
-                if tipo_coord == "WGS84":
-                    st.info("Detectadas coordenadas en WGS84 (lon/lat). Convertidas automáticamente a UTM.")
-                else:
-                    st.info("Detectadas coordenadas en UTM ETRS89.")
-
-                municipio_encontrado, masa_sel, parcela_sel, parcela_gdf = encontrar_municipio_poligono_parcela(utm_x, utm_y)
-
-                if municipio_encontrado != "N/A":
-                    municipio_sel = municipio_encontrado
-                    st.success(f"Municipio: {municipio_sel} | Polígono: {masa_sel} | Parcela: {parcela_sel}")
-
-                    st.session_state['utm_x'] = utm_x
-                    st.session_state['utm_y'] = utm_y
-
-                else:
-                    st.warning("No se encontró ninguna parcela en ese punto.")
+                st.warning("No se encontró ninguna parcela catastral en ese punto.")
         
     nombre = st.text_input("Nombre")
     apellidos = st.text_input("Apellidos")
@@ -2610,37 +2585,18 @@ if submitted:
     if not nombre or not apellidos or not dni or x == 0 or y == 0:
         st.warning("Por favor, completa todos los campos obligatorios y asegúrate de que las coordenadas son válidas.")
     else:
-        # === 3. TRANSFORMAR COORDENADAS ===
-        # 1) Recuperar UTM desde paso 2
-        utm_x = st.session_state.get('utm_x', None)
-        utm_y = st.session_state.get('utm_y', None)
-
-        # 2) Si no estaban guardadas, interpretamos x,y
-        if utm_x is None or utm_y is None:
-            utm_x, utm_y, tipo_coord = interpretar_coordenadas(x, y)
-            if tipo_coord == "INVALIDO" or utm_x is None:
-                st.error("No se pudo generar el informe: coordenadas inválidas.")
-                st.stop()
-
-        # 3) Convertir UTM → WGS84 (lon, lat)
-        lon, lat = transformar_coordenadas(utm_x, utm_y)
+        
+    # === 3. TRANSFORMAR COORDENADAS (exacto como carm.py) ===
+        lon, lat = transformar_coordenadas(x, y)
         if lon is None or lat is None:
-            st.error("No se pudo transformar las coordenadas a WGS84.")
+            st.error("Coordenadas fuera del rango válido de Castilla-La Mancha (UTM Zona 30N).")
             st.stop()
-
-        # 4) IMPORTANTÍSIMO: fijar x,y a las UTM correctas
-        x = utm_x
-        y = utm_y
 
 # === 4. DEFINIR query_geom (UNA VEZ) ===
 if modo == "Por parcela":
-    if parcela is not None and hasattr(parcela, 'geometry') and parcela.geometry is not None:
-        query_geom = parcela.geometry
-    else:
-        st.error("Error crítico: no se pudo obtener la geometría de la parcela.")
-        st.stop()
-else:
-    query_geom = Point(x, y)
+            query_geom = parcela.geometry
+        else:
+            query_geom = Point(x, y)
 
             # === 5. GUARDAR query_geom Y URLs EN SESSION_STATE ===
             st.session_state['query_geom'] = query_geom
@@ -2714,7 +2670,9 @@ else:
                 "afección flora": afeccion_flora,
                 "coordenadas_x": x, "coordenadas_y": y,
                 "provincia": provincia_sel,
-                "municipio": municipio_sel, "polígono": masa_sel, "parcela": parcela_sel
+                "municipio": municipio_sel, 
+                "polígono": masa_sel, 
+                "parcela": parcela_sel
             }
 
             # === 8. MOSTRAR RESULTADOS EN PANTALLA ===
@@ -2748,6 +2706,7 @@ else:
             # === 11. LIMPIAR DATOS TEMPORALES ===
             st.session_state.pop('query_geom', None)
             st.session_state.pop('wfs_urls', None)
+            
 if st.session_state['mapa_html'] and st.session_state['pdf_file']:
     try:
         with open(st.session_state['pdf_file'], "rb") as f:
