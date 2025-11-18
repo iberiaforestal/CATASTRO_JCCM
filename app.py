@@ -2425,7 +2425,7 @@ def generar_pdf(datos, x, y, filename):
         "En cuanto a vías pecuarias, salvaguardando lo que pudiera resultar de los futuros deslindes, en las parcelas objeto este informe-borrador, cualquier construcción, plantación, vallado, obras, instalaciones, etc., no deberían realizarse dentro del área delimitada como dominio público pecuario provisional para evitar invadir éste.\n\n"
         "En todo caso, no podrá interrumpirse el tránsito por las Vías Pecuarias, dejando siempre el paso adecuado para el tránsito ganadero y otros usos legalmente establecidos en la Ley 3/1995, de 23 de marzo, de Vías Pecuarias."
     )
-    pdf.multi_cell(pdf.w - 2 * pdf.l_margin, 5, texto_final, border=0, align="J")
+    pdf.multi_cell(190, 5, texto_final, border=0, align="J")
     pdf.ln(2)
 
     
