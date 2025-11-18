@@ -28,7 +28,6 @@ def normalize_name(name):
                .replace("Í", "I")\
                .replace("Ó", "O")\
                .replace("Ú", "U")\
-               .replace("Ñ", "N")\
                .replace("Ü", "U")\
                .replace("º", "")\
                .replace("ª", "")
