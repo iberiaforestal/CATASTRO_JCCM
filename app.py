@@ -20,6 +20,21 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import shutil
 from PIL import Image
+def normalize_name(name):
+    return name.upper()\
+               .replace(" ", "_")\
+               .replace("Á", "A")\
+               .replace("É", "E")\
+               .replace("Í", "I")\
+               .replace("Ó", "O")\
+               .replace("Ú", "U")\
+               .replace("Ñ", "N")\
+               .replace("Ü", "U")\
+               .replace("º", "")\
+               .replace("ª", "")\
+               .replace("-", "_")\
+               .replace("(", "")\
+               .replace(")", "")
 
 # Sesión segura con reintentos
 session = requests.Session()
