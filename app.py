@@ -997,7 +997,7 @@ def cargar_shapefile_clm(provincia_folder, municipio_file):
                     f.write(response.content)
                 local_paths[ext] = local_path
             except requests.exceptions.RequestException:
-                return None
+                return None  # Si falta cualquier archivo, devolvemos None
         
         try:
             gdf = gpd.read_file(local_paths[".shp"])
