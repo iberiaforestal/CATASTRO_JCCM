@@ -990,23 +990,24 @@ def cargar_shapefile_clm(provincia_folder, municipio_file):
             filename = municipio_file + ext
             url = base_url + filename
             try:
-                response = session.get(url, timeout=60)
+                response = requests.get(url, timeout=100)
                 response.raise_for_status()
-                local_path = os.path.join(tmpdir, filename)
-                with open(local_path, "wb") as f:
-                    f.write(response.content)
-                local_paths[ext] = local_path
-            except:
+            except requests.exceptions.RequestException as e:
+                st.error(f"Error al descargar {url}: {str(e)}")
                 return None
-        
-        try:
-            gdf = gpd.read_file(local_paths[".shp"])
-            if gdf.empty:
-                return None
-            return gdf.to_crs("EPSG:25830")
-        except:
-            return None
             
+            local_path = os.path.join(tmpdir, filename)
+            with open(local_path, "wb") as f:
+                f.write(response.content)
+            local_paths[ext] = local_path
+        
+        shp_path = local_paths[".shp"]
+        try:
+            gdf = gpd.read_file(shp_path)
+            return gdf
+        except Exception as e:
+            st.error(f"Error al leer shapefile {shp_path}: {str(e)}")
+            return None
 # Función para encontrar municipio, polígono y parcela a partir de coordenadas
 def encontrar_municipio_poligono_parcela(x, y):
     try:
