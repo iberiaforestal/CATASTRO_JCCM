@@ -2560,141 +2560,143 @@ with st.form("formulario"):
     submitted = st.form_submit_button("Generar informe")
     
 # === 1. LIMPIAR ARCHIVOS DE BÚSQUEDAS ANTERIORES ===
-    for key in ['mapa_html', 'pdf_file']:
-        if key in st.session_state and st.session_state[key]:
-            try:
-                if os.path.exists(st.session_state[key]):
-                    os.remove(st.session_state[key])
-            except:
-                pass
-    st.session_state.pop('mapa_html', None)
-    st.session_state.pop('pdf_file', None)
+for key in ['mapa_html', 'pdf_file']:
+    if key in st.session_state and st.session_state[key]:
+        try:
+            if os.path.exists(st.session_state[key]):
+                os.remove(st.session_state[key])
+        except:
+            pass
+st.session_state.pop('mapa_html', None)
+st.session_state.pop('pdf_file', None)
 
+if submitted:
     # === 2. VALIDAR CAMPOS OBLIGATORIOS ===
     if not nombre or not apellidos or not dni or x == 0 or y == 0:
         st.warning("Por favor, completa todos los campos obligatorios y asegúrate de que las coordenadas son válidas.")
     else:
-        
-    # === 3. TRANSFORMAR COORDENADAS (exacto como carm.py) ===
+        # === 3. TRANSFORMAR COORDENADAS ===
         lon, lat = transformar_coordenadas(x, y)
         if lon is None or lat is None:
             st.error("Coordenadas fuera del rango válido de Castilla-La Mancha (UTM Zona 30N).")
             st.stop()
 
-    # === 4. DEFINIR query_geom (UNA VEZ) ===
+        # === 4. DEFINIR query_geom ===
         if modo == "Por parcela":
             query_geom = parcela.geometry
         else:
             query_geom = Point(x, y)
 
-            # === 5. GUARDAR query_geom Y URLs EN SESSION_STATE ===
-            st.session_state['query_geom'] = query_geom
-            flora_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:planes_recuperacion_flora2014&outputFormat=application/json"
-            garbancillo_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_garbancillo&outputFormat=application/json"
-            malvasia_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_malvasia&outputFormat=application/json"
-            fartet_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_fartet&outputFormat=application/json"
-            nutria_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_nutria&outputFormat=application/json"
-            perdicera_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_perdicera&outputFormat=application/json"
-            tortuga_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_DES_BIOTA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_DES_BIOTA_CARM:tortuga_distribucion_2001&outputFormat=application/json"
-            uso_suelo_url = "https://mapas-gis-inter.carm.es/geoserver/SIT_USU_PLA_URB_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIT_USU_PLA_URB_CARM:plu_ze_37_mun_uso_suelo&outputFormat=application/json"
-            esteparias_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_DES_BIOTA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_DES_BIOTA_CARM:esteparias_ceea_2019_10x10&outputFormat=application/json"
-            enp_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:ENP&outputFormat=application/json"
-            zepa_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:ZEPA&outputFormat=application/json"
-            lic_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:LIC-ZEC&outputFormat=application/json"
-            vp_url = "https://mapas-gis-inter.carm.es/geoserver/PFO_ZOR_DMVP_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=PFO_ZOR_DMVP_CARM:VP_CARM&outputFormat=application/json"
-            tm_url = "https://mapas-gis-inter.carm.es/geoserver/MAP_UAD_DIVISION-ADMINISTRATIVA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=MAP_UAD_DIVISION-ADMINISTRATIVA_CARM:recintos_municipales_inspire_carm_etrs89&outputFormat=application/json"
-            mup_url = "https://mapas-gis-inter.carm.es/geoserver/PFO_ZOR_DMVP_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=PFO_ZOR_DMVP_CARM:MONTES&outputFormat=application/json"
-            st.session_state['wfs_urls'] = {
-                'enp': enp_url, 'zepa': zepa_url, 'lic': lic_url,
-                'vp': vp_url, 'tm': tm_url, 'mup': mup_url, 
-                'esteparias': esteparias_url,
-                'uso_suelo': uso_suelo_url,
-                'tortuga': tortuga_url,
-                'perdicera': perdicera_url,
-                'nutria': nutria_url,
-                'fartet': fartet_url,
-                'malvasia': malvasia_url,
-                'garbancillo': garbancillo_url,
-                'flora': flora_url
-            }
+        # === 5. GUARDAR query_geom Y URLs EN SESSION_STATE ===
+        st.session_state['query_geom'] = query_geom
+        flora_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:planes_recuperacion_flora2014&outputFormat=application/json"
+        garbancillo_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_garbancillo&outputFormat=application/json"
+        malvasia_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_malvasia&outputFormat=application/json"
+        fartet_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_fartet&outputFormat=application/json"
+        nutria_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_nutria&outputFormat=application/json"
+        perdicera_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_ZOR_PLANIGEST_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_ZOR_PLANIGEST_CARM:plan_recuperacion_perdicera&outputFormat=application/json"
+        tortuga_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_DES_BIOTA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_DES_BIOTA_CARM:tortuga_distribucion_2001&outputFormat=application/json"
+        uso_suelo_url = "https://mapas-gis-inter.carm.es/geoserver/SIT_USU_PLA_URB_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIT_USU_PLA_URB_CARM:plu_ze_37_mun_uso_suelo&outputFormat=application/json"
+        esteparias_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_DES_BIOTA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_DES_BIOTA_CARM:esteparias_ceea_2019_10x10&outputFormat=application/json"
+        enp_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:ENP&outputFormat=application/json"
+        zepa_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:ZEPA&outputFormat=application/json"
+        lic_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:LIC-ZEC&outputFormat=application/json"
+        vp_url = "https://mapas-gis-inter.carm.es/geoserver/PFO_ZOR_DMVP_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=PFO_ZOR_DMVP_CARM:VP_CARM&outputFormat=application/json"
+        tm_url = "https://mapas-gis-inter.carm.es/geoserver/MAP_UAD_DIVISION-ADMINISTRATIVA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=MAP_UAD_DIVISION-ADMINISTRATIVA_CARM:recintos_municipales_inspire_carm_etrs89&outputFormat=application/json"
+        mup_url = "https://mapas-gis-inter.carm.es/geoserver/PFO_ZOR_DMVP_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=PFO_ZOR_DMVP_CARM:MONTES&outputFormat=application/json"
 
-            # === 6. CONSULTAR AFECCIONES ===
-            afeccion_flora = consultar_wfs_seguro(query_geom, flora_url, "FLORA", campo_nombre="tipo")
-            afeccion_garbancillo = consultar_wfs_seguro(query_geom, garbancillo_url, "GARBANCILLO", campo_nombre="tipo")
-            afeccion_malvasia = consultar_wfs_seguro(query_geom, malvasia_url, "MALVASIA", campo_nombre="clasificac")
-            afeccion_fartet = consultar_wfs_seguro(query_geom, fartet_url, "FARTET", campo_nombre="clasificac")
-            afeccion_nutria = consultar_wfs_seguro(query_geom, nutria_url, "NUTRIA", campo_nombre="tipo_de_ar")
-            afeccion_perdicera = consultar_wfs_seguro(query_geom, perdicera_url, "ÁGUILA PERDICERA", campo_nombre="zona")
-            afeccion_tortuga = consultar_wfs_seguro(query_geom, tortuga_url, "TORTUGA MORA", campo_nombre="cat_desc")
-            afeccion_uso_suelo = consultar_wfs_seguro(query_geom, uso_suelo_url, "PLANEAMIENTO", campo_nombre="Clasificacion")
-            afeccion_esteparias = consultar_wfs_seguro(query_geom, esteparias_url, "ESTEPARIAS", campo_nombre="nombre")
-            afeccion_enp = consultar_wfs_seguro(query_geom, enp_url, "ENP", campo_nombre="nombre")
-            afeccion_zepa = consultar_wfs_seguro(query_geom, zepa_url, "ZEPA", campo_nombre="site_name")
-            afeccion_lic = consultar_wfs_seguro(query_geom, lic_url, "LIC", campo_nombre="site_name")
-            afeccion_vp = consultar_wfs_seguro(query_geom, vp_url, "VP", campo_nombre="vp_nb")
-            afeccion_tm = consultar_wfs_seguro(query_geom, tm_url, "TM", campo_nombre="nameunit")
-            afeccion_mup = consultar_wfs_seguro(
-                query_geom, mup_url, "MUP",
-                campos_mup=["id_monte:ID", "nombremont:Nombre", "municipio:Municipio", "propiedad:Propiedad"]
-            )
-            afecciones = [afeccion_flora, afeccion_garbancillo, afeccion_malvasia, afeccion_fartet, afeccion_nutria, afeccion_perdicera, afeccion_tortuga, afeccion_uso_suelo, afeccion_esteparias, afeccion_enp, afeccion_zepa, afeccion_lic, afeccion_vp, afeccion_tm, afeccion_mup]
+        st.session_state['wfs_urls'] = {
+            'enp': enp_url, 'zepa': zepa_url, 'lic': lic_url,
+            'vp': vp_url, 'tm': tm_url, 'mup': mup_url,
+            'esteparias': esteparias_url,
+            'uso_suelo': uso_suelo_url,
+            'tortuga': tortuga_url,
+            'perdicera': perdicera_url,
+            'nutria': nutria_url,
+            'fartet': fartet_url,
+            'malvasia': malvasia_url,
+            'garbancillo': garbancillo_url,
+            'flora': flora_url
+        }
 
-            # === 7. CREAR DICCIONARIO `datos` ===
-            datos = {
-                "fecha_informe": datetime.today().strftime('%d/%m/%Y'),
-                "nombre": nombre, "apellidos": apellidos, "dni": dni,
-                "dirección": direccion, "teléfono": telefono, "email": email,
-                "objeto de la solicitud": objeto,
-                "afección MUP": afeccion_mup, "afección VP": afeccion_vp,
-                "afección ENP": afeccion_enp, "afección ZEPA": afeccion_zepa,
-                "afección LIC": afeccion_lic, "Afección TM": afeccion_tm,
-                "afección esteparias": afeccion_esteparias,
-                "afección uso_suelo": afeccion_uso_suelo,
-                "afección tortuga": afeccion_tortuga,
-                "afección perdicera": afeccion_perdicera,
-                "afección nutria": afeccion_nutria,
-                "afección fartet": afeccion_fartet,
-                "afección malvasia": afeccion_malvasia,
-                "afección garbancillo": afeccion_garbancillo,
-                "afección flora": afeccion_flora,
-                "coordenadas_x": x, "coordenadas_y": y,
-                "provincia": provincia_sel,
-                "municipio": municipio_sel, 
-                "polígono": masa_sel, 
-                "parcela": parcela_sel
-            }
+        # === 6. CONSULTAR AFECCIONES ===
+        afeccion_flora = consultar_wfs_seguro(query_geom, flora_url, "FLORA", campo_nombre="tipo")
+        afeccion_garbancillo = consultar_wfs_seguro(query_geom, garbancillo_url, "GARBANCILLO", campo_nombre="tipo")
+        afeccion_malvasia = consultar_wfs_seguro(query_geom, malvasia_url, "MALVASIA", campo_nombre="clasificac")
+        afeccion_fartet = consultar_wfs_seguro(query_geom, fartet_url, "FARTET", campo_nombre="clasificac")
+        afeccion_nutria = consultar_wfs_seguro(query_geom, nutria_url, "NUTRIA", campo_nombre="tipo_de_ar")
+        afeccion_perdicera = consultar_wfs_seguro(query_geom, perdicera_url, "ÁGUILA PERDICERA", campo_nombre="zona")
+        afeccion_tortuga = consultar_wfs_seguro(query_geom, tortuga_url, "TORTUGA MORA", campo_nombre="cat_desc")
+        afeccion_uso_suelo = consultar_wfs_seguro(query_geom, uso_suelo_url, "PLANEAMIENTO", campo_nombre="Clasificacion")
+        afeccion_esteparias = consultar_wfs_seguro(query_geom, esteparias_url, "ESTEPARIAS", campo_nombre="nombre")
+        afeccion_enp = consultar_wfs_seguro(query_geom, enp_url, "ENP", campo_nombre="nombre")
+        afeccion_zepa = consultar_wfs_seguro(query_geom, zepa_url, "ZEPA", campo_nombre="site_name")
+        afeccion_lic = consultar_wfs_seguro(query_geom, lic_url, "LIC", campo_nombre="site_name")
+        afeccion_vp = consultar_wfs_seguro(query_geom, vp_url, "VP", campo_nombre="vp_nb")
+        afeccion_tm = consultar_wfs_seguro(query_geom, tm_url, "TM", campo_nombre="nameunit")
+        afeccion_mup = consultar_wfs_seguro(
+            query_geom, mup_url, "MUP",
+            campos_mup=["id_monte:ID", "nombremont:Nombre", "municipio:Municipio", "propiedad:Propiedad"]
+        )
 
-            # === 8. MOSTRAR RESULTADOS EN PANTALLA ===
-            st.write(f"Municipio seleccionado: {municipio_sel}")
-            st.write(f"Polígono seleccionado: {masa_sel}")
-            st.write(f"Parcela seleccionada: {parcela_sel}")
+        afecciones = [afeccion_flora, afeccion_garbancillo, afeccion_malvasia, afeccion_fartet, afeccion_nutria,
+                      afeccion_perdicera, afeccion_tortuga, afeccion_uso_suelo, afeccion_esteparias, afeccion_enp,
+                      afeccion_zepa, afeccion_lic, afeccion_vp, afeccion_tm, afeccion_mup]
 
-            # === 9. GENERAR MAPA ===
-            parcela_gdf_para_mapa = parcela if (modo == "Por parcela" and parcela is not None) else None
-            mapa_html, afecciones_lista = crear_mapa(lon, lat, afecciones, parcela_gdf=parcela_gdf_para_mapa)
-            
-            if mapa_html:
-                st.session_state['mapa_html'] = mapa_html
-                st.session_state['afecciones'] = afecciones_lista
-                
-                st.subheader("Resultado de las afecciones")
-                for afeccion in afecciones_lista:
-                    st.write(f"• {afeccion}")
-                    
-                with open(mapa_html, "r", encoding="utf-8") as f:
-                    html(f.read(), height=600)
+        # === 7. CREAR DICCIONARIO `datos` ===
+        datos = {
+            "fecha_informe": datetime.today().strftime('%d/%m/%Y'),
+            "nombre": nombre, "apellidos": apellidos, "dni": dni,
+            "dirección": direccion, "teléfono": telefono, "email": email,
+            "objeto de la solicitud": objeto,
+            "afección MUP": afeccion_mup, "afección VP": afeccion_vp,
+            "afección ENP": afeccion_enp, "afección ZEPA": afeccion_zepa,
+            "afección LIC": afeccion_lic, "Afección TM": afeccion_tm,
+            "afección esteparias": afeccion_esteparias,
+            "afección uso_suelo": afeccion_uso_suelo,
+            "afección tortuga": afeccion_tortuga,
+            "afección perdicera": afeccion_perdicera,
+            "afección nutria": afeccion_nutria,
+            "afección fartet": afeccion_fartet,
+            "afección malvasia": afeccion_malvasia,
+            "afección garbancillo": afeccion_garbancillo,
+            "afección flora": afeccion_flora,
+            "coordenadas_x": x, "coordenadas_y": y,
+            "provincia": provincia_sel,
+            "municipio": municipio_sel,
+            "polígono": masa_sel,
+            "parcela": parcela_sel
+        }
 
-            # === 10. GENERAR PDF (AL FINAL, CUANDO `datos` EXISTE) ===
-            pdf_filename = f"informe_{uuid.uuid4().hex[:8]}.pdf"
-            try:
-                generar_pdf(datos, x, y, pdf_filename)
-                st.session_state['pdf_file'] = pdf_filename
-            except Exception as e:
-                st.error(f"Error al generar el PDF: {str(e)}")
+        # === 8. MOSTRAR RESULTADOS ===
+        st.write(f"Municipio seleccionado: {municipio_sel}")
+        st.write(f"Polígono seleccionado: {masa_sel}")
+        st.write(f"Parcela seleccionada: {parcela_sel}")
 
-            # === 11. LIMPIAR DATOS TEMPORALES ===
-            st.session_state.pop('query_geom', None)
-            st.session_state.pop('wfs_urls', None)
+        # === 9. GENERAR MAPA ===
+        parcela_gdf_para_mapa = parcela if (modo == "Por parcela" and parcela is not None) else None
+        mapa_html, afecciones_lista = crear_mapa(lon, lat, afecciones, parcela_gdf=parcela_gdf_para_mapa)
+
+        if mapa_html:
+            st.session_state['mapa_html'] = mapa_html
+            st.session_state['afecciones'] = afecciones_lista
+            st.subheader("Resultado de las afecciones")
+            for afeccion in afecciones_lista:
+                st.write(f"• {afeccion}")
+            with open(mapa_html, "r", encoding="utf-8") as f:
+                html(f.read(), height=600)
+
+        # === 10. GENERAR PDF ===
+        pdf_filename = f"informe_{uuid.uuid4().hex[:8]}.pdf"
+        try:
+            generar_pdf(datos, x, y, pdf_filename)
+            st.session_state['pdf_file'] = pdf_filename
+        except Exception as e:
+            st.error(f"Error al generar el PDF: {str(e)}")
+
+        # === 11. LIMPIAR TEMPORALES ===
+        st.session_state.pop('query_geom', None)
+        st.session_state.pop('wfs_urls', None)
             
 if st.session_state['mapa_html'] and st.session_state['pdf_file']:
     try:
