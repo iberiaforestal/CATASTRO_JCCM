@@ -1022,27 +1022,26 @@ def obtener_provincia_por_coordenadas(x, y):
         for idx, row in gdf_prov.iterrows():
             if row.geometry.contains(punto):
                 return row['provincia']
-        return "N/A"                               # punto fuera de CLM
+        return "N/A"                      # punto fuera de los 5 polígonos
     except Exception:
-        st.warning("Límites provinciales no disponibles → usando búsqueda completa (más lenta)", icon="Warning")
-        return None                                    # ← CLAVE: devolvemos None
+        # Aquí estaba el error → icon="Warning" ya no vale
+        st.warning("Límites provinciales no disponibles → usando búsqueda completa (más lenta)")
+        return None                       # ← importante: None, no "N/A"
 
 
 def encontrar_municipio_poligono_parcela(x, y):
     punto = Point(x, y)
     
-    # 1º Intentamos detectar provincia rapidísimo
     provincia = obtener_provincia_por_coordenadas(x, y)
     
-    # Si conseguimos provincia válida → solo buscamos ahí
-    if provincia and provincia in shp_urls:
-        municipios_a_buscar = [provincia]
-    else:
-        # Si falla el JSON o punto fuera → búsqueda completa (método lento pero seguro
-        municipios_a_buscar = shp_urls.keys()
+    # Si tenemos provincia válida → solo esa
+    # Si None (falló el JSON) → todas
+    # Si "N/A" → fuera de CLM
+    provincias_a_buscar = [provincia] if provincia and provincia != "N/A" else shp_urls.keys()
     
-    # 2º Búsqueda (rápida si hay provincia, lenta solo como fallback)
-    for prov in municipios_a_buscar:
+    for prov in provincias_a_buscar:
+        if prov not in shp_urls:
+            continue
         for municipio_display, municipio_file in shp_urls[prov].items():
             gdf = cargar_shapefile_clm(prov, municipio_file)
             if gdf is not None and not gdf.empty:
