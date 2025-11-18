@@ -21,7 +21,7 @@ from urllib3.util.retry import Retry
 import shutil
 from PIL import Image
 def normalize_name(name):
-    return name.upper()\
+    name = name.upper()\
                .replace(" ", "_")\
                .replace("Á", "A")\
                .replace("É", "E")\
@@ -35,6 +35,13 @@ def normalize_name(name):
                .replace("-", "_")\
                .replace("(", "")\
                .replace(")", "")
+
+    # EXCEPCIÓN ESPECIAL: en GitHub la carpeta es "CIUDAD REAL" (con espacio), no con _
+    if name == "CIUDAD_REAL":
+        return "CIUDAD REAL"
+    
+    return name
+    
 
 # Sesión segura con reintentos
 session = requests.Session()
@@ -983,12 +990,13 @@ shp_urls = {
 def cargar_shapefile_clm(provincia_folder, municipio_file):
     # CORRECTO: ahora apunta dentro de la carpeta del municipio
     base_url = f"https://raw.githubusercontent.com/iberiaforestal/CATASTRO_JCCM/master/CATASTRO/{provincia_folder}/{municipio_file}/{municipio_file}"
+    base_url = base_url.replace(" ", "%20")
     exts = [".shp", ".shx", ".dbf", ".prj", ".cpg"]
    
     with tempfile.TemporaryDirectory() as tmpdir:
         local_paths = {}
         for ext in exts:
-            url = base_url + ext
+            url = f"{base_url}{ext}"
             try:
                 response = session.get(url, timeout=60)  # usamos tu session con reintentos
                 response.raise_for_status()
