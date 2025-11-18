@@ -812,7 +812,6 @@ shp_urls = {
         "LA TOBA": "LA TOBA",
         "LA YUNTA": "LA YUNTA",
         "LEDANCA": "LEDANCA",
-        "lista.txt": "lista.txt",
         "LORANCA DE TAJUÑA": "LORANCA DE TAJUÑA",
         "LUPIANA": "LUPIANA",
         "LUZAGA": "LUZAGA",
