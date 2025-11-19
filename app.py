@@ -1663,21 +1663,22 @@ def generar_pdf(datos, x, y, filename):
     # === VP ===
     vp_detectado = []
     
-        procesar_capa_multiple(
+    procesar_capa_multiple(
         vp_url,
         "afección VP",
         "No afecta a ninguna Vía Pecuaria",
         ["COD_VP", "NUM_NOM", "MUNICIPIO", "DELIMITAC", "SUP_HA"],
         vp_detectado
     )
-    # ← Formateo bonito de la superficie (opcional pero queda pro)
+    
+    # Formateo bonito de la superficie (ha con 2 decimales)
     for i in range(len(vp_detectado)):
         fila = list(vp_detectado[i])
-        if fila[4] not in ("N/A", "", None):
-            try:
+        try:
+            if fila[4] not in ("N/A", "", None):
                 fila[4] = f"{float(fila[4]):.2f} ha"
-            except:
-                pass
+        except:
+            fila[4] = "N/A"
         vp_detectado[i] = tuple(fila)
 
     # === ZEPA ===
