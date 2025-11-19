@@ -1113,40 +1113,32 @@ def interpretar_coordenadas(x, y):
     return None, None, "INVALIDO"
 
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
+import json
+
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
-    """
-    Consulta WFS o ArcGIS FeatureServer con:
-    - Descarga cacheada (_descargar_geojson)
-    - Geometría shapely (Polygon o MultiPolygon)
-    - Manejo de campos MUP o normales
-    """
     data = _descargar_geojson(url)
     if data is None:
         return f"Indeterminado: {nombre_afeccion} (servicio no disponible)"
 
     try:
-        # Cargar capa correctamente según tipo
+        # Detectar ArcGIS FeatureServer
         if "FeatureServer" in url:
-            import json
-            js = json.loads(data.getvalue().decode("utf-8"))
+            js = json.load(data)  # leer JSON desde BytesIO
             gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
         else:
             gdf = gpd.read_file(data)
 
-        # Convertir geom a GeoSeries con CRS
-        geom_gs = gpd.GeoSeries([geom], crs="EPSG:25830")  # ajusta CRS según tu input
-
-        # Asegurar que gdf y geom tienen mismo CRS
-        if gdf.crs != geom_gs.crs:
-            gdf = gdf.to_crs(geom_gs.crs)
+        # Asegurar CRS consistente
+        if gdf.crs != geom.crs:
+            gdf = gdf.to_crs(geom.crs)
 
         # Intersección
-        seleccion = gdf[gdf.intersects(geom_gs.iloc[0])]
+        seleccion = gdf[gdf.intersects(geom)]
 
         if seleccion.empty:
             return f"No afecta a {nombre_afeccion}"
 
-        # --- MODO MUP: campos personalizados ---
+        # Modo MUP
         if campos_mup:
             info = []
             for _, row in seleccion.iterrows():
@@ -1155,13 +1147,14 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
                 info.append("\n".join(f"{etiquetas[i]}: {valores[i]}" for i in range(len(campos_mup))))
             return f"Dentro de {nombre_afeccion}:\n" + "\n\n".join(info)
 
-        # --- MODO NORMAL: solo nombres ---
+        # Modo normal
         else:
             nombres = ', '.join(seleccion[campo_nombre].dropna().unique())
             return f"Dentro de {nombre_afeccion}: {nombres}"
 
     except Exception as e:
-        return f"Indeterminado: {nombre_afeccion} (error de datos: {str(e)})"
+        return f"Indeterminado: {nombre_afeccion} (error de datos)"
+
 
 # Función para crear el mapa con afecciones específicas
 def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
