@@ -1898,7 +1898,7 @@ def generar_pdf(datos, x, y, filename):
             pdf.add_page()  # Salta a nueva página si no cabe
         
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 5, "Afecciones a Vías Pecuarias (VP):", ln=True)
+        pdf.cell(0, 5, "Afecciones a Vías Pecuarias (VP):", ln=True) 
         pdf.ln(2)
 
         # Configurar la tabla para VP
