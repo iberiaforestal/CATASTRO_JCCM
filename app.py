@@ -1114,27 +1114,39 @@ def interpretar_coordenadas(x, y):
 
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
+    """
+    Consulta WFS o ArcGIS FeatureServer con:
+    - Descarga cacheada (_descargar_geojson)
+    - Geometría shapely (Polygon o MultiPolygon)
+    - Manejo de campos MUP o normales
+    """
     data = _descargar_geojson(url)
     if data is None:
         return f"Indeterminado: {nombre_afeccion} (servicio no disponible)"
 
     try:
+        # Cargar capa correctamente según tipo
         if "FeatureServer" in url:
             import json
-            js = json.loads(data.getvalue().decode("utf-8"))  # <-- clave
+            js = json.loads(data.getvalue().decode("utf-8"))
             gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
         else:
             gdf = gpd.read_file(data)
 
-        # CRS consistente
-        if gdf.crs != geom.crs:
-            gdf = gdf.to_crs(geom.crs)
+        # Convertir geom a GeoSeries con CRS
+        geom_gs = gpd.GeoSeries([geom], crs="EPSG:25830")  # ajusta CRS según tu input
 
-        seleccion = gdf[gdf.intersects(geom)]
+        # Asegurar que gdf y geom tienen mismo CRS
+        if gdf.crs != geom_gs.crs:
+            gdf = gdf.to_crs(geom_gs.crs)
+
+        # Intersección
+        seleccion = gdf[gdf.intersects(geom_gs.iloc[0])]
 
         if seleccion.empty:
             return f"No afecta a {nombre_afeccion}"
 
+        # --- MODO MUP: campos personalizados ---
         if campos_mup:
             info = []
             for _, row in seleccion.iterrows():
@@ -1143,6 +1155,7 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
                 info.append("\n".join(f"{etiquetas[i]}: {valores[i]}" for i in range(len(campos_mup))))
             return f"Dentro de {nombre_afeccion}:\n" + "\n\n".join(info)
 
+        # --- MODO NORMAL: solo nombres ---
         else:
             nombres = ', '.join(seleccion[campo_nombre].dropna().unique())
             return f"Dentro de {nombre_afeccion}: {nombres}"
