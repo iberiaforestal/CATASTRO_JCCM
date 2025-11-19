@@ -1667,20 +1667,10 @@ def generar_pdf(datos, x, y, filename):
         vp_url,
         "afección VP",
         "No afecta a ninguna Vía Pecuaria",
-        ["COD_VP", "NUM_NOM", "MUNICIPIO", "DELIMITAC", "SUP_HA"],
+        ["COD_VP", "NUM_NOM", "MUNICIPIO", "CLASIF_POR", "ANCH_LEGAL"],
         vp_detectado
     )
     
-    # Formateo bonito de la superficie (ha con 2 decimales)
-    for i in range(len(vp_detectado)):
-        fila = list(vp_detectado[i])
-        try:
-            if fila[4] not in ("N/A", "", None):
-                fila[4] = f"{float(fila[4]):.2f} ha" 
-        except:
-            fila[4] = "N/A"
-        vp_detectado[i] = tuple(fila)
-
     # === ZEPA ===
     zepa_detectado = []
     zepa_valor = procesar_capa(
@@ -1912,7 +1902,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.ln(2)
 
         # Configurar la tabla para VP
-        col_widths = [30, 50, 40, 40, 30]  # Anchos: Código, Nombre, Municipio, Situación Legal, Superficie
+        col_widths = [30, 50, 40, 40, 30]  # Anchos: Código, Nombre, Municipio, Situación Legal, Anchura legal
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -1920,13 +1910,13 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(col_widths[1], row_height, "Nombre", border=1, fill=True)
         pdf.cell(col_widths[2], row_height, "Municipio", border=1, fill=True)
         pdf.cell(col_widths[3], row_height, "Situación Legal", border=1, fill=True)
-        pdf.cell(col_widths[4], row_height, "Superficie", border=1, fill=True)
+        pdf.cell(col_widths[4], row_height, "Anchura legal", border=1, fill=True)
         pdf.ln()
 
         # Agregar filas a la tabla
         pdf.set_font("Arial", "", 10)
 
-        for codigo_vp, nombre, municipio, situacion_legal, superficie in vp_detectado:
+        for codigo_vp, nombre, municipio, situacion_legal, anchura legal in vp_detectado:
 
             line_height = 5  # altura base de una línea
 
@@ -1975,7 +1965,7 @@ def generar_pdf(datos, x, y, filename):
 
             # Ancho legal
             pdf.set_xy(x + col_widths[0] + col_widths[1] + col_widths[2] + col_widths[3], y)
-            pdf.multi_cell(col_widths[4], line_height, str(superficie), align="L")
+            pdf.multi_cell(col_widths[4], line_height, str(anchura legal), align="L")
 
             # Mover a la siguiente fila
             pdf.set_xy(x, y + row_h)
@@ -2853,7 +2843,7 @@ if submitted:
         enp_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:ENP&outputFormat=application/json"
         zepa_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:ZEPA&outputFormat=application/json"
         lic_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:LIC-ZEC&outputFormat=application/json"
-        vp_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services/vias_pecuarias_poligonos/FeatureServer/1/query?outFields=*&where=1=1&f=geojson"
+        vp_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services/vias_pecuarias_ejes_aprox/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson"
         tm_url = "https://mapas-gis-inter.carm.es/geoserver/MAP_UAD_DIVISION-ADMINISTRATIVA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=MAP_UAD_DIVISION-ADMINISTRATIVA_CARM:recintos_municipales_inspire_carm_etrs89&outputFormat=application/json"
         mup_url = "https://mapas-gis-inter.carm.es/geoserver/PFO_ZOR_DMVP_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=PFO_ZOR_DMVP_CARM:MONTES&outputFormat=application/json"
 
