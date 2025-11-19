@@ -1257,7 +1257,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     """
 
     legend = MacroElement()
-    legend._template = legend_html
+    legend._template = Template(legend_html)
     m.get_root().add_child(legend)
 
     # Añadir marcadores de afecciones
