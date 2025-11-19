@@ -1212,8 +1212,8 @@ for name, url, style_cfg in arcgis_layers:
 
 folium.LayerControl().add_to(m)
 
-    legend_html = f"""
-    {{% macro html(this, kwargs) %}}
+legend_html = f"""
+{{% macro html(this, kwargs) %}}
 <div style="
     position: fixed;
     bottom: 20px;
