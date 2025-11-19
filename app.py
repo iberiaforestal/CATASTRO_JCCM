@@ -1916,7 +1916,7 @@ def generar_pdf(datos, x, y, filename):
         # Agregar filas a la tabla
         pdf.set_font("Arial", "", 10)
 
-        for codigo_vp, nombre, municipio, situacion_legal, anchura legal in vp_detectado:
+        for codigo_vp, nombre, municipio, situacion_legal, anchura_legal in vp_detectado:
 
             line_height = 5  # altura base de una línea
 
@@ -1965,7 +1965,7 @@ def generar_pdf(datos, x, y, filename):
 
             # Ancho legal
             pdf.set_xy(x + col_widths[0] + col_widths[1] + col_widths[2] + col_widths[3], y)
-            pdf.multi_cell(col_widths[4], line_height, str(anchura legal), align="L")
+            pdf.multi_cell(col_widths[4], line_height, str(anchura_legal), align="L")
 
             # Mover a la siguiente fila
             pdf.set_xy(x, y + row_h)
