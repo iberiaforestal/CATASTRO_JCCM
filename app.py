@@ -1892,7 +1892,7 @@ def generar_pdf(datos, x, y, filename):
         
     # === TABLA VP ===
     if vp_detectado:
-        altura_estimada = 10 + (len(vp_detectado) * 12) + 10
+        altura_estimada = 10 + (len(vp_detectado) * 14) + 10  # un poco más de margen
         if not hay_espacio_suficiente(pdf, altura_estimada):
             pdf.add_page()
 
@@ -1900,59 +1900,61 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(0, 5, "Afecciones a Vías Pecuarias (VP):", ln=True)
         pdf.ln(2)
 
-        col_widths = [30, 50, 40, 40, 30]  # Tus anchos originales (los respetamos)
+        col_widths = [30, 50, 40, 40, 30]  # Tus anchos originales
         line_height = 5
 
-        # === CABECERA (igual que antes) ===
+        5
+
+        # Cabecera
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
         pdf.cell(col_widths[0], 6, "Código", border=1, fill=True, align="C")
         pdf.cell(col_widths[1], 6, "Nombre", border=1, fill=True, align="C")
         pdf.cell(col_widths[2], 6, "Municipio", border=1, fill=True, align="C")
         pdf.cell(col_widths[3], 6, "Situación Legal", border=1, fill=True, align="C")
-        pdf.cell(col_widths[4], 6, "Anchura legal", border=1, fill=True, align="C")  # ← TU TEXTO ORIGINAL
+        pdf.cell(col_widths[4], 6, "Anchura legal", border=1, fill=True, align="C")
         pdf.ln()
 
-        # === FILAS CON NOMBRE MULTILÍNEA PERFECTO ===
         pdf.set_font("Arial", "", 10)
         for codigo_vp, nombre, municipio, situacion_legal, anchura_legal in vp_detectado:
-            # Convertir a string seguro
             codigo_vp = str(codigo_vp or "")
             nombre = str(nombre or "")
             municipio = str(municipio or "")
             situacion_legal = str(situacion_legal or "")
             anchura_legal = str(anchura_legal or "N/A")
 
-            # Calcular líneas que ocupa cada columna (solo para saber la altura real)
+            # LÍNEA NUEVA → calculamos líneas del municipio también
             nombre_lines = len(pdf.multi_cell(col_widths[1], line_height, nombre, split_only=True))
-            sit_lines = len(pdf.multi_cell(col_widths[3], line_height, situacion_legal, split_only=True))
+            municipio_lines = len(pdf.multi_cell(col_widths[2], line_height, municipio, split_only=True))
+            situacion_lines = len(pdf.multi_cell(col_widths[3], line_height, situacion_legal, split_only=True))
 
-            # Altura de fila = la mayor de todas (así el nombre largo fuerza más líneas)
-            row_h = max(6, nombre_lines * line_height, sit_lines * line_height)
+            # Altura de fila = máximo de nombre, municipio y situación
+            row_h = max(6, nombre_lines * line_height, municipio_lines * line_height, situacion_lines * line_height)
 
             x = pdf.get_x()
             y = pdf.get_y()
 
-            # Dibujar los 5 rectángulos
+            # Bordes
             cumsum = 0
             for w in col_widths:
                 pdf.rect(x + cumsum, y, w, row_h)
                 cumsum += w
 
-            # Escribir texto (con centrado vertical)
+            # Texto centrado verticalmente
             pdf.set_xy(x, y + (row_h - line_height) / 2)
             pdf.multi_cell(col_widths[0], line_height, codigo_vp)
 
             pdf.set_xy(x + col_widths[0], y + (row_h - (nombre_lines * line_height)) / 2)
             pdf.multi_cell(col_widths[1], line_height, nombre)
 
-            pdf.set_xy(x + col_widths[0] + col_widths[1], y + (row_h - line_height) / 2)
+            # MUNICIPIO AHORA TAMBIÉN MULTILÍNEA Y CENTRADO
+            pdf.set_xy(x + col_widths[0] + col_widths[1], y + (row_h - (municipio_lines * line_height)) / 2)
             pdf.multi_cell(col_widths[2], line_height, municipio)
 
-            pdf.set_xy(x + col_widths[0] + col_widths[1] + col_widths[2], y + (row_h - (sit_lines * line_height)) / 2)
+            pdf.set_xy(x + col_widths[0] + col_widths[1] + col_widths[2], y + (row_h - (situacion_lines * line_height)) / 2)
             pdf.multi_cell(col_widths[3], line_height, situacion_legal)
 
-            pdf.set_xy(x + col_widths[0] + col_widths[1] + col_widths[2] + col_widths[3], y + (row_h - line_height) / 2)
+            pdf.set_xy(x + sum(col_widths[:4]), y + (row_h - line_height) / 2)
             pdf.multi_cell(col_widths[4], line_height, anchura_legal)
 
             pdf.set_y(y + row_h)
