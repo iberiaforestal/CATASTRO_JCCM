@@ -1197,7 +1197,17 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
 
     for name, url, style_cfg in arcgis_layers:
 
-        geojson_url = f"{url}/query?where=1%3D1&outFields=*&f=geojson"
+        # Bounding box pequeño alrededor del punto
+        delta = 0.02  # unos ±2 km (ajustable)
+        
+        bbox = f"{lon-delta},{lat-delta},{lon+delta},{lat+delta}"
+        
+        geojson_url = (
+            f"{url}/query?"
+            f"geometry={bbox}&geometryType=esriGeometryEnvelope"
+            f"&spatialRel=esriSpatialRelIntersects"
+            f"&outFields=*&f=geojson"
+        )
 
         try:
             response = requests.get(geojson_url)
