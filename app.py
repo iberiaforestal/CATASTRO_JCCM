@@ -1119,23 +1119,24 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
         return f"Indeterminado: {nombre_afeccion} (servicio no disponible)"
 
     try:
-        # ---- Detectar FeatureServer ----
+        # Detectar ArcGIS FeatureServer
         if "FeatureServer" in url:
-            js = json.load(data)
+            js = json.load(data)  # leer JSON desde BytesIO
             gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
         else:
             gdf = gpd.read_file(data)
 
-        # Asegurarnos que geom y gdf están en el mismo CRS
+        # Asegurar CRS consistente
         if gdf.crs != geom.crs:
             gdf = gdf.to_crs(geom.crs)
 
+        # Intersección
         seleccion = gdf[gdf.intersects(geom)]
 
         if seleccion.empty:
             return f"No afecta a {nombre_afeccion}"
 
-        # --- MODO MUP ---
+        # Modo MUP
         if campos_mup:
             info = []
             for _, row in seleccion.iterrows():
@@ -1144,7 +1145,7 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
                 info.append("\n".join(f"{etiquetas[i]}: {valores[i]}" for i in range(len(campos_mup))))
             return f"Dentro de {nombre_afeccion}:\n" + "\n\n".join(info)
 
-        # --- MODO NORMAL ---
+        # Modo normal
         else:
             nombres = ', '.join(seleccion[campo_nombre].dropna().unique())
             return f"Dentro de {nombre_afeccion}: {nombres}"
