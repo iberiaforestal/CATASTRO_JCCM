@@ -1203,21 +1203,29 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     bottom: 20px;
     left: 20px;
     background-color: white;
-    border: 1px solid grey;
+    border: 2px solid #2e7d32;
+    border-radius: 8px;
     z-index: 9999;
-    font-size: 10px;
-    padding: 5px;
-    box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-    line-height: 1.1em;
-    width: auto;
-    transform: scale(0.75);
-    transform-origin: top left;
+    font-size: 11px;
+    padding: 8px 10px;
+    box-shadow: 3px 3px 10px rgba(0,0,0,0.4);
+    line-height: 1.4em;
+    font-family: Arial, sans-serif;
+    transform: scale(0.9);
+    transform-origin: bottom left;
 ">
-    <b>Leyenda</b><br>
-    <div>
-        <img src="https://geoservicios.castillalamancha.es/arcgis/rest/services/medio_ambiente/Red_Natura_2000/MapServer/WMSServer?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=0" alt="Red Natura CLM"><br>
-        <img src="https://mapas-gis-inter.carm.es/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=PFO_ZOR_DMVP_CARM%3AMONTES" alt="Montes"><br>
-        <img src="https://mapas-gis-inter.carm.es/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=PFO_ZOR_DMVP_CARM%3AVP_CARM" alt="Vias Pecuarias"><br>
+    <b style="color: #2e7d32;">Leyenda</b><br>
+    <div style="margin-top: 4px;">
+        <i style="background: rgba(76, 175, 80, 0.4); border: 1.5px solid #2e7d32; width: 16px; height: 16px; display: inline-block; border-radius: 3px;"></i>
+        <span style="position: relative; top: -4px; margin-left: 6px;">Red Natura 2000 (LIC / ZEPA)</span><br>
+        
+        <!-- Si añades Montes más adelante: -->
+        <!-- <i style="background: rgba(139, 69, 19, 0.4); border: 1.5px solid #8B4513; width: 16px; height: 16px; display: inline-block; border-radius: 3px;"></i>
+        <span style="position: relative; top: -4px; margin-left: 6px;">Montes UP</span><br> -->
+        
+        <!-- Si añades Vías Pecuarias: -->
+        <!-- <i style="background: orange; width: 16px; height: 2px; display: inline-block; margin-left: 3px; margin-right: 3px;"></i>
+        <span style="position: relative; top: -6px;">Vías Pecuarias</span> -->
     </div>
 </div>
 {% endmacro %}
