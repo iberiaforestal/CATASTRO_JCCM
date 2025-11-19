@@ -1187,7 +1187,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
          {"color": "#008000", "fillColor": "#00FF00"}),
 
         ("Montes Utilidad Pública", 
-         "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/montes_utilidad_publica/FeatureServer/0",
+         "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/montes_up/FeatureServer/0",
          {"color": "#8B4513", "fillColor": "#CD853F"}),
 
         ("Vías Pecuarias", 
