@@ -1511,26 +1511,47 @@ def generar_pdf(datos, x, y, filename):
     garbancillo_key = "Afección PLAN RECUPERACION GARBANCILLO"
     flora_key = "Afección PLAN RECUPERACION FLORA"
         
-# === PROCESAR TODAS LAS CAPAS (VP, ZEPA, LIC, ENP) ===
-    def procesar_capa(url, key, valor_inicial, campos, detectado_list):
-        valor = datos.get(key, "").strip()
-        if valor and not valor.startswith("No afecta") and not valor.startswith("Error"):
-            try:
-                data = _descargar_geojson(url)
-                if data is None:
-                    return "Error al consultar"
-                gdf = gpd.read_file(data)
-                seleccion = gdf[gdf.intersects(query_geom)]
-                if not seleccion.empty:
-                    for _, props in seleccion.iterrows():
-                        fila = tuple(props.get(campo, "N/A") for campo in campos)
-                        detectado_list.append(fila)
-                    return ""
-                return valor_inicial
-            except Exception as e:
-                st.error(f"Error al procesar {key}: {e}")
+# === FUNCIÓN GENÉRICA PARA PROCESAR CAPAS ===
+def procesar_capa(url, key, valor_inicial, campos, detectado_list):
+    """
+    Consulta WFS o ArcGIS FeatureServer y llena detectado_list con filas intersectadas.
+    """
+    valor = datos.get(key, "").strip()
+    if valor and not valor.startswith("No afecta") and not valor.startswith("Error"):
+        try:
+            data = _descargar_geojson(url)
+            if data is None:
                 return "Error al consultar"
-        return valor_inicial if not detectado_list else ""
+
+            # --- Cargar GeoDataFrame según tipo de servicio ---
+            if "FeatureServer" in url:
+                import json
+                js = json.loads(data.getvalue().decode("utf-8"))
+                gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
+            else:
+                gdf = gpd.read_file(data)
+
+            # --- CRS consistente ---
+            geom_gs = gpd.GeoSeries([query_geom], crs="EPSG:25830")  # ajusta CRS según tu input
+            if gdf.crs != geom_gs.crs:
+                gdf = gdf.to_crs(geom_gs.crs)
+
+            # --- Selección por intersección ---
+            seleccion = gdf[gdf.intersects(geom_gs.iloc[0])]
+
+            if not seleccion.empty:
+                for _, props in seleccion.iterrows():
+                    fila = tuple(props.get(campo, "N/A") for campo in campos)
+                    detectado_list.append(fila)
+                return ""
+            
+            return valor_inicial
+
+        except Exception as e:
+            st.error(f"Error al procesar {key}: {e}")
+            return "Error al consultar"
+
+    return valor_inicial if not detectado_list else ""
 
     # === VP ===
     vp_detectado = []
