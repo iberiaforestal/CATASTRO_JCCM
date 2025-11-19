@@ -1830,7 +1830,7 @@ def generar_pdf(datos, x, y, filename):
     if not zepa_detectado:
         otras_afecciones.append(("Afección ZEPA", zepa_valor if zepa_valor else "No afecta a ninguna ZEPA"))
     if not vp_detectado:
-        otras_afecciones.append(("Afección VP", vp_valor if vp_valor else "No afecta a ninguna VP"))
+        otras_afecciones.append(("Afección VP", "No afecta a ninguna VP"))
     if not mup_detectado:
         otras_afecciones.append(("Afección MUP", mup_valor if mup_valor else "No afecta a ningún MUP"))
 
