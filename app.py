@@ -2743,7 +2743,7 @@ if submitted:
         afeccion_enp = consultar_wfs_seguro(query_geom, enp_url, "ENP", campo_nombre="nombre")
         afeccion_zepa = consultar_wfs_seguro(query_geom, zepa_url, "ZEPA", campo_nombre="site_name")
         afeccion_lic = consultar_wfs_seguro(query_geom, lic_url, "LIC", campo_nombre="site_name")
-        afeccion_vp = consultar_wfs_seguro(query_geom, vp_url, "VP", campo_nombre="vp_nb")
+        afeccion_vp = consultar_wfs_seguro(query_geom, vp_url, "VP", campo_nombre="NUM_NOM")
         afeccion_tm = consultar_wfs_seguro(query_geom, tm_url, "TM", campo_nombre="nameunit")
         afeccion_mup = consultar_wfs_seguro(
             query_geom, mup_url, "MUP",
