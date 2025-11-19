@@ -1175,7 +1175,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
             st.warning(f"No se pudo dibujar la parcela en el mapa: {str(e)}")
 
     wms_layers = [
-        ("Red Natura 2000", "medio_ambiente/Red_Natura_2000/MapServer/WMSServer", "0"),
+        ("Red Natura 2000", "red_natura_2000_limites/FeatureServer/1"),
         ("Montes", "PFO_ZOR_DMVP_CARM:MONTES"),
         ("Vias Pecuarias", "PFO_ZOR_DMVP_CARM:VP_CARM")
     ]
