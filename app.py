@@ -1243,8 +1243,53 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
     except Exception as e:
         return f"Indeterminado: {nombre_afeccion} (error de datos: {str(e)})"
 
+# === FUNCIÓN AUXILIAR PARA CAPAS CON MÚLTIPLES COLUMNAS (como en Murcia) ===
+def procesar_capa_multiple(url, key_datos, texto_si_no_hay, campos_gis, lista_destino):
+    """
+    Usa los datos ya guardados en st.session_state (o donde tengas 'datos')
+    para no volver a descargar.
+    Si hay afección → descarga el GeoJSON, busca las features que intersectan
+    y mete tuplas con los campos pedidos en lista_destino.
+    """
+    valor_guardado = datos.get(key_datos, "").strip()
 
+    # Si no hay afección según la consulta ligera → no hacemos nada pesado
+    if not valor_guardado or valor_guardado.startswith("No afecta") or "Indeterminado" in valor_guardado:
+        return texto_si_no_hay
 
+    try:
+        data = _descargar_geojson(url)
+        if data is None:
+            return "Error al descargar capa"
+
+        # Cargar GeoDataFrame
+        if "FeatureServer" in url:
+            import json
+            js = json.loads(data.getvalue().decode("utf-8"))
+            gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
+        else:
+            gdf = gpd.read_file(data)
+
+        # Asegurar mismo CRS
+        geom_gs = gpd.GeoSeries([query_geom], crs="EPSG:25830")
+        if gdf.crs != geom_gs.crs:
+            gdf = gdf.to_crs(geom_gs.crs)
+
+        # Intersección
+        interseccion = gdf[gdf.intersects(geom_gs.iloc[0])]
+        if interseccion.empty:
+            return texto_si_no_hay
+
+        # Rellenar la lista con tuplas
+        for _, row in interseccion.iterrows():
+            fila = tuple(str(row.get(campo, "N/A")).strip() for campo in campos_gis)
+            lista_destino.append(fila)
+
+        return ""  # éxito silencioso
+
+    except Exception as e:
+        st.error(f"Error procesando {key_datos}: {e}")
+        return "Error al procesar capa"
 
 # Función para crear el mapa con afecciones específicas
 def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
@@ -1617,11 +1662,23 @@ def generar_pdf(datos, x, y, filename):
 
     # === VP ===
     vp_detectado = []
-    vp_valor = procesar_capa(
-        vp_url, "afección VP", "No afecta a ninguna Vía Pecuaria",
+    
+        procesar_capa_multiple(
+        vp_url,
+        "afección VP",
+        "No afecta a ninguna Vía Pecuaria",
         ["COD_VP", "NUM_NOM", "MUNICIPIO", "DELIMITAC", "SUP_HA"],
         vp_detectado
     )
+    # ← Formateo bonito de la superficie (opcional pero queda pro)
+    for i in range(len(vp_detectado)):
+        fila = list(vp_detectado[i])
+        if fila[4] not in ("N/A", "", None):
+            try:
+                fila[4] = f"{float(fila[4]):.2f} ha"
+            except:
+                pass
+        vp_detectado[i] = tuple(fila)
 
     # === ZEPA ===
     zepa_detectado = []
