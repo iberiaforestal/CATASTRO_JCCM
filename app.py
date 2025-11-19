@@ -1676,7 +1676,7 @@ def generar_pdf(datos, x, y, filename):
         fila = list(vp_detectado[i])
         try:
             if fila[4] not in ("N/A", "", None):
-                fila[4] = f"{float(fila[4]):.2f} ha"
+                fila[4] = f"{float(fila[4]):.2f} ha" 
         except:
             fila[4] = "N/A"
         vp_detectado[i] = tuple(fila)
