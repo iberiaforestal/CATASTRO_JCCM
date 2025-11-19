@@ -1175,17 +1175,18 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
             st.warning(f"No se pudo dibujar la parcela en el mapa: {str(e)}")
 
     wms_layers = [
-        ("Red Natura 2000", "SIG_LUP_SITES_CARM:RN2000"),
+        ("Red Natura 2000", "medio_ambiente/Red_Natura_2000/MapServer/WMSServer", "0"),
         ("Montes", "PFO_ZOR_DMVP_CARM:MONTES"),
         ("Vias Pecuarias", "PFO_ZOR_DMVP_CARM:VP_CARM")
     ]
     for name, layer in wms_layers:
         try:
+            url_base = f"https://geoservicios.castillalamancha.es/arcgis/rest/services/{service_path}"
             folium.raster_layers.WmsTileLayer(
-                url="https://mapas-gis-inter.carm.es/geoserver/ows?SERVICE=WMS&?",
+                url=url_base + "?SERVICE=WMS&REQUEST=GetCapabilities",
                 name=name,
                 fmt="image/png",
-                layers=layer,
+                layers=layer_id,
                 transparent=True,
                 opacity=0.25,
                 control=True
@@ -1214,7 +1215,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
 ">
     <b>Leyenda</b><br>
     <div>
-        <img src="https://mapas-gis-inter.carm.es/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=SIG_LUP_SITES_CARM%3ARN2000" alt="Red Natura"><br>
+        <img src="https://geoservicios.castillalamancha.es/arcgis/rest/services/medio_ambiente/Red_Natura_2000/MapServer/WMSServer?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=0" alt="Red Natura CLM"><br>
         <img src="https://mapas-gis-inter.carm.es/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=PFO_ZOR_DMVP_CARM%3AMONTES" alt="Montes"><br>
         <img src="https://mapas-gis-inter.carm.es/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20&height=20&layer=PFO_ZOR_DMVP_CARM%3AVP_CARM" alt="Vias Pecuarias"><br>
     </div>
