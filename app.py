@@ -1335,7 +1335,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
          {"color": "#8B4513", "fillColor": "#CD853F"}),
 
         ("Vías Pecuarias", 
-         "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/vias_pecuarias_poligonos/FeatureServer/1",
+         "https://https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/vias_pecuarias_ejes_aprox/FeatureServer/1",
          {"color": "#0000FF", "fillColor": "#87CEFA"}),
     ]
 
