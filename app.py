@@ -2834,7 +2834,7 @@ if submitted:
         lic_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:LIC-ZEC&outputFormat=application/json"
         vp_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services/vias_pecuarias_ejes_aprox/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson"
         tm_url = "https://mapas-gis-inter.carm.es/geoserver/MAP_UAD_DIVISION-ADMINISTRATIVA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=MAP_UAD_DIVISION-ADMINISTRATIVA_CARM:recintos_municipales_inspire_carm_etrs89&outputFormat=application/json"
-        mup_url = "https://mapas-gis-inter.carm.es/geoserver/PFO_ZOR_DMVP_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=PFO_ZOR_DMVP_CARM:MONTES&outputFormat=application/json"
+        mup_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services/montes_utilidad_publica/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
 
         st.session_state['wfs_urls'] = {
             'enp': enp_url, 'zepa': zepa_url, 'lic': lic_url,
@@ -2867,7 +2867,7 @@ if submitted:
         afeccion_tm = consultar_wfs_seguro(query_geom, tm_url, "TM", campo_nombre="nameunit")
         afeccion_mup = consultar_wfs_seguro(
             query_geom, mup_url, "MUP",
-            campos_mup=["id_monte:ID", "nombremont:Nombre", "municipio:Municipio", "propiedad:Propiedad"]
+            campos_mup=["ID:ID", "NOMBRE:Nombre", "TERMINO_M:Municipio", "PROPIEDAD:Propiedad"]
         )
 
         afecciones = [afeccion_flora, afeccion_garbancillo, afeccion_malvasia, afeccion_fartet, afeccion_nutria,
