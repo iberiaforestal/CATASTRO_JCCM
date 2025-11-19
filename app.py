@@ -1115,7 +1115,7 @@ def interpretar_coordenadas(x, y):
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
     """
-    Consulta WFS con:
+    Consulta WFS o ArcGIS FeatureServer con:
     - Descarga cacheada (rápida después de la 1ª vez)
     - Geometría NO cacheada (evita UnhashableParamError)
     """
@@ -1124,7 +1124,13 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
         return f"Indeterminado: {nombre_afeccion} (servicio no disponible)"
 
     try:
-        gdf = gpd.read_file(data)
+        if "FeatureServer" in url:
+            import json
+            js = json.load(data)
+            gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
+        else:
+            gdf = gpd.read_file(data)
+
         seleccion = gdf[gdf.intersects(geom)]
         
         if seleccion.empty:
