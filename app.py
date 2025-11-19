@@ -1088,6 +1088,86 @@ def _descargar_geojson(url):
             st._wfs_warnings.add(warning_key)
         return None
 
+def cargar_capa_geometrica(url, query_geom):
+    """
+    Devuelve un GeoDataFrame de una URL, sea:
+    - WFS
+    - ArcGIS FeatureServer
+    - GeoJSON directo
+    - Shapefile ZIP
+    """
+
+    # Detectar si es ArcGIS FeatureServer
+    if "FeatureServer" in url:
+        return cargar_arcgis_featureserver(url, query_geom)
+
+    # Detectar si es WFS (GeoServer)
+    if "service=WFS" in url.lower():
+        return cargar_wfs(url)
+
+    # Detectar GeoJSON directo
+    if url.lower().endswith(".geojson") or url.lower().endswith(".json"):
+        r = descargar(url)
+        if not r:
+            return gpd.GeoDataFrame()
+        return gpd.read_file(BytesIO(r.content))
+
+    # Detectar ZIP (shapefile)
+    if url.lower().endswith(".zip"):
+        r = descargar(url)
+        if not r:
+            return gpd.GeoDataFrame()
+        return gpd.read_file(BytesIO(r.content))
+
+    # Por defecto intentar GeoJSON
+    try:
+        r = descargar(url)
+        return gpd.read_file(BytesIO(r.content))
+    except:
+        return gpd.GeoDataFrame()
+
+def cargar_arcgis_featureserver(url, query_geom):
+    minx, miny, maxx, maxy = query_geom.bounds
+
+    params = {
+        "where": "1=1",
+        "geometry": f"{minx},{miny},{maxx},{maxy}",
+        "geometryType": "esriGeometryEnvelope",
+        "spatialRel": "esriSpatialRelIntersects",
+        "outFields": "*",
+        "outSR": "4326",
+        "f": "geojson"
+    }
+
+    r = requests.get(url, params=params, timeout=30)
+    if not r.ok:
+        return gpd.GeoDataFrame()
+
+    data = r.json()
+    if "features" not in data:
+        return gpd.GeoDataFrame()
+
+    return gpd.GeoDataFrame.from_features(
+        data["features"], crs="EPSG:4326"
+    )
+
+def procesar_capa(url, nombre, campos, query_geom):
+    gdf = cargar_capa_geometrica(url, query_geom)
+
+    if gdf.empty:
+        return "No afecta", []
+
+    seleccion = gdf[gdf.intersects(query_geom)]
+
+    if seleccion.empty:
+        return "No afecta", []
+
+    filas = []
+    for _, row in seleccion.iterrows():
+        filas.append(tuple(row.get(c, "N/A") for c in campos))
+
+    return "", filas
+
 # --- NUEVA FUNCIÓN (PASO 1) ---
 def interpretar_coordenadas(x, y):
     """
