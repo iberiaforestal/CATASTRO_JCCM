@@ -1893,7 +1893,7 @@ def generar_pdf(datos, x, y, filename):
     # === TABLA VP ===
     if vp_detectado:
         # Estimamos altura: título + cabecera + filas + espacio
-        altura_estimada = 5 + 5 + (len(vp_detectado) * 6) + 10
+        altura_estimada = 10 + (len(vp_detectado) * 12) + 10
         if not hay_espacio_suficiente(pdf, altura_estimada):
             pdf.add_page()  # Salta a nueva página si no cabe
         
