@@ -1520,7 +1520,7 @@ def generar_pdf(datos, x, y, filename):
     vp_detectado = []
     vp_valor = procesar_capa(
         vp_url, "afección VP", "No afecta a ninguna Vía Pecuaria",
-        ["vp_cod", "vp_nb", "vp_mun", "vp_sit_leg", "vp_anch_lg"],
+        ["COD_VP", "NUM_NOM", "MUNICIPIO", "DELIMITAC", "SUP_HA"],
         vp_detectado
     )
 
@@ -1755,7 +1755,7 @@ def generar_pdf(datos, x, y, filename):
         pdf.ln(2)
 
         # Configurar la tabla para VP
-        col_widths = [30, 50, 40, 40, 30]  # Anchos: Código, Nombre, Municipio, Situación Legal, Ancho Legal
+        col_widths = [30, 50, 40, 40, 30]  # Anchos: Código, Nombre, Municipio, Situación Legal, Superficie
         row_height = 5
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
@@ -1763,13 +1763,13 @@ def generar_pdf(datos, x, y, filename):
         pdf.cell(col_widths[1], row_height, "Nombre", border=1, fill=True)
         pdf.cell(col_widths[2], row_height, "Municipio", border=1, fill=True)
         pdf.cell(col_widths[3], row_height, "Situación Legal", border=1, fill=True)
-        pdf.cell(col_widths[4], row_height, "Ancho Legal", border=1, fill=True)
+        pdf.cell(col_widths[4], row_height, "Superficie", border=1, fill=True)
         pdf.ln()
 
         # Agregar filas a la tabla
         pdf.set_font("Arial", "", 10)
 
-        for codigo_vp, nombre, municipio, situacion_legal, ancho_legal in vp_detectado:
+        for codigo_vp, nombre, municipio, situacion_legal, superficie in vp_detectado:
 
             line_height = 5  # altura base de una línea
 
@@ -1818,7 +1818,7 @@ def generar_pdf(datos, x, y, filename):
 
             # Ancho legal
             pdf.set_xy(x + col_widths[0] + col_widths[1] + col_widths[2] + col_widths[3], y)
-            pdf.multi_cell(col_widths[4], line_height, str(ancho_legal), align="L")
+            pdf.multi_cell(col_widths[4], line_height, str(superficie), align="L")
 
             # Mover a la siguiente fila
             pdf.set_xy(x, y + row_h)
