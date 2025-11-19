@@ -1156,99 +1156,111 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     m = folium.Map(location=[lat, lon], zoom_start=16)
     folium.Marker([lat, lon], popup=f"Coordenadas transformadas: {lon}, {lat}").add_to(m)
 
+    # Dibujar parcela
     if parcela_gdf is not None:
         try:
-            # Si es una fila (GeoSeries) → convertir a GeoDataFrame
             if hasattr(parcela_gdf, 'geometry') and not hasattr(parcela_gdf, 'to_crs'):
                 parcela_gdf = gpd.GeoDataFrame([parcela_gdf], crs="EPSG:25830")
-            
-            # Ahora sí podemos usar to_crs de forma segura
+
             parcela_4326 = parcela_gdf.to_crs("EPSG:4326")
-            
+
             folium.GeoJson(
                 parcela_4326.to_json(),
                 name="Parcela",
-                style_function=lambda x: {'fillColor': 'transparent', 'color': 'blue', 'weight': 3, 'dashArray': '5, 5'}
+                style_function=lambda x: {
+                    'fillColor': 'transparent',
+                    'color': 'blue',
+                    'weight': 3,
+                    'dashArray': '5, 5'
+                }
             ).add_to(m)
-            
+
         except Exception as e:
             st.warning(f"No se pudo dibujar la parcela en el mapa: {str(e)}")
 
-arcgis_layers = [
-    ("Red Natura 2000", 
-     "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/red_natura_2000_limites/FeatureServer/1",
-     {"color": "#008000", "fillColor": "#00FF00"}),
+    # ===============================
+    # CAPAS ARCgis FeatureServer
+    # ===============================
+    arcgis_layers = [
+        ("Red Natura 2000", 
+         "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/red_natura_2000_limites/FeatureServer/1",
+         {"color": "#008000", "fillColor": "#00FF00"}),
 
-    ("Montes Utilidad Pública", 
-     "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/montes_utilidad_publica/FeatureServer/0",
-     {"color": "#8B4513", "fillColor": "#CD853F"}),
+        ("Montes Utilidad Pública", 
+         "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/montes_utilidad_publica/FeatureServer/0",
+         {"color": "#8B4513", "fillColor": "#CD853F"}),
 
-    ("Vías Pecuarias", 
-     "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/vias_pecuarias_poligonos/FeatureServer/1",
-     {"color": "#0000FF", "fillColor": "#87CEFA"}),
-]
-for name, url, style_cfg in arcgis_layers:
+        ("Vías Pecuarias", 
+         "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/vias_pecuarias_poligonos/FeatureServer/1",
+         {"color": "#0000FF", "fillColor": "#87CEFA"}),
+    ]
 
-    geojson_url = f"{url}/query?where=1%3D1&outFields=*&f=geojson"
+    for name, url, style_cfg in arcgis_layers:
 
-    try:
-        response = requests.get(geojson_url)
-        response.raise_for_status()
-        data = response.json()
+        geojson_url = f"{url}/query?where=1%3D1&outFields=*&f=geojson"
 
-        folium.GeoJson(
-            data,
-            name=name,
-            style_function=lambda x, cfg=style_cfg: {
-                "color": cfg["color"],
-                "weight": 2,
-                "fillColor": cfg["fillColor"],
-                "fillOpacity": 0.3
-            }
-        ).add_to(m)
+        try:
+            response = requests.get(geojson_url)
+            response.raise_for_status()
+            data = response.json()
 
-    except Exception as e:
-        st.error(f"Error al cargar la capa {name}: {str(e)}")
+            folium.GeoJson(
+                data,
+                name=name,
+                style_function=lambda x, cfg=style_cfg: {
+                    "color": cfg["color"],
+                    "weight": 2,
+                    "fillColor": cfg["fillColor"],
+                    "fillOpacity": 0.3
+                }
+            ).add_to(m)
 
-folium.LayerControl().add_to(m)
+        except Exception as e:
+            st.error(f"Error al cargar la capa {name}: {str(e)}")
 
-legend_html = f"""
-{{% macro html(this, kwargs) %}}
-<div style="
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    background-color: white;
-    border: 1px solid grey;
-    z-index: 9999;
-    font-size: 10px;
-    padding: 5px;
-    box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-    line-height: 1.1em;
-    width: auto;
-    transform: scale(0.75);
-    transform-origin: top left;
-">
-    <b>Leyenda</b><br>
+    folium.LayerControl().add_to(m)
 
-    <div>
-        <span style="display:inline-block;width:20px;height:20px;background:#00FF00;border:1px solid #008000;"></span>
-        Red Natura 2000<br>
+    # ===============================
+    # LEYENDA
+    # ===============================
+    legend_html = """
+    {% macro html(this, kwargs) %}
+    <div style="
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background-color: white;
+        border: 1px solid grey;
+        z-index: 9999;
+        font-size: 10px;
+        padding: 5px;
+        box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+        line-height: 1.1em;
+        width: auto;
+        transform: scale(0.75);
+        transform-origin: top left;
+    ">
+        <b>Leyenda</b><br>
 
-        <span style="display:inline-block;width:20px;height:20px;background:#CD853F;border:1px solid #8B4513;"></span>
-        Montes Utilidad Pública<br>
+        <div>
+            <span style="display:inline-block;width:20px;height:20px;background:#00FF00;border:1px solid #008000;"></span>
+            Red Natura 2000<br>
 
-        <span style="display:inline-block;width:20px;height:20px;background:#87CEFA;border:1px solid #0000FF;"></span>
-        Vías Pecuarias<br>
+            <span style="display:inline-block;width:20px;height:20px;background:#CD853F;border:1px solid #8B4513;"></span>
+            Montes Utilidad Pública<br>
+
+            <span style="display:inline-block;width:20px;height:20px;background:#87CEFA;border:1px solid #0000FF;"></span>
+            Vías Pecuarias<br>
+        </div>
     </div>
-</div>
-{{% endmacro %}}
-"""
+    {% endmacro %}
+    """
 
-legend = MacroElement()
-legend._template = legend_html
-m.get_root().add_child(legend)
+    legend = MacroElement()
+    legend._template = legend_html
+    m.get_root().add_child(legend)
 
+    # Añadir marcadores de afecciones
     for afeccion in afecciones:
         folium.Marker([lat, lon], popup=afeccion).add_to(m)
 
