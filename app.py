@@ -1181,7 +1181,7 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     ]
     for name, service_path, layer_id in wms_layers:
         try:
-            url_base = f"https://geoservicios.castillalamancha.es/arcgis/rest/services/{service_path}"
+            url_base = f"https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/{service_path}"
             folium.raster_layers.WmsTileLayer(
                 url=url_base + "?SERVICE=WMS&REQUEST=GetCapabilities",
                 name=name,
