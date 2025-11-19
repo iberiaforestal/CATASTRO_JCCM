@@ -1114,29 +1114,28 @@ def interpretar_coordenadas(x, y):
 
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
-    """
-    Consulta WFS o ArcGIS FeatureServer con:
-    - Descarga cacheada (rápida después de la 1ª vez)
-    - Geometría NO cacheada (evita UnhashableParamError)
-    """
     data = _descargar_geojson(url)
     if data is None:
         return f"Indeterminado: {nombre_afeccion} (servicio no disponible)"
 
     try:
+        # ---- Detectar FeatureServer ----
         if "FeatureServer" in url:
-            import json
             js = json.load(data)
             gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
         else:
             gdf = gpd.read_file(data)
 
+        # Asegurarnos que geom y gdf están en el mismo CRS
+        if gdf.crs != geom.crs:
+            gdf = gdf.to_crs(geom.crs)
+
         seleccion = gdf[gdf.intersects(geom)]
-        
+
         if seleccion.empty:
             return f"No afecta a {nombre_afeccion}"
 
-        # --- MODO MUP: campos personalizados ---
+        # --- MODO MUP ---
         if campos_mup:
             info = []
             for _, row in seleccion.iterrows():
@@ -1145,7 +1144,7 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
                 info.append("\n".join(f"{etiquetas[i]}: {valores[i]}" for i in range(len(campos_mup))))
             return f"Dentro de {nombre_afeccion}:\n" + "\n\n".join(info)
 
-        # --- MODO NORMAL: solo nombres ---
+        # --- MODO NORMAL ---
         else:
             nombres = ', '.join(seleccion[campo_nombre].dropna().unique())
             return f"Dentro de {nombre_afeccion}: {nombres}"
