@@ -1174,66 +1174,80 @@ def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
         except Exception as e:
             st.warning(f"No se pudo dibujar la parcela en el mapa: {str(e)}")
 
-    wms_layers = [
-        ("Red Natura 2000", "red_natura_2000_limites/FeatureServer/1"),
-        ("Montes", "PFO_ZOR_DMVP_CARM:MONTES"),
-        ("Vias Pecuarias", "PFO_ZOR_DMVP_CARM:VP_CARM")
-    ]
-    for name, service_path in wms_layers:
-        try:
-            url_base = f"https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/{service_path}"
-            folium.raster_layers.WmsTileLayer(
-                url=url_base + "?SERVICE=WMS&REQUEST=GetCapabilities",
-                name=name,
-                fmt="image/png",
-                layers="0",
-                transparent=True,
-                opacity=0.25,
-                control=True
-            ).add_to(m)
-        except Exception as e:
-            st.warning(f"Error al cargar la capa WMS {name}: {str(e)}") 
+arcgis_layers = [
+    ("Red Natura 2000", 
+     "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/red_natura_2000_limites/FeatureServer/1",
+     {"color": "#008000", "fillColor": "#00FF00"}),
 
-    folium.LayerControl().add_to(m)
+    ("Montes Utilidad Pública", 
+     "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/montes_utilidad_publica/FeatureServer/0",
+     {"color": "#8B4513", "fillColor": "#CD853F"}),
 
-    legend_html = """
-    {% macro html(this, kwargs) %}
+    ("Vías Pecuarias", 
+     "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/ArcGIS/rest/services/vias_pecuarias_poligonos/FeatureServer/1",
+     {"color": "#0000FF", "fillColor": "#87CEFA"}),
+]
+for name, url, style_cfg in arcgis_layers:
+
+    geojson_url = f"{url}/query?where=1%3D1&outFields=*&f=geojson"
+
+    try:
+        response = requests.get(geojson_url)
+        response.raise_for_status()
+        data = response.json()
+
+        folium.GeoJson(
+            data,
+            name=name,
+            style_function=lambda x, cfg=style_cfg: {
+                "color": cfg["color"],
+                "weight": 2,
+                "fillColor": cfg["fillColor"],
+                "fillOpacity": 0.3
+            }
+        ).add_to(m)
+
+    except Exception as e:
+        st.error(f"Error al cargar la capa {name}: {str(e)}")
+
+folium.LayerControl().add_to(m)
+
+    legend_html = f"""
+    {{% macro html(this, kwargs) %}}
 <div style="
     position: fixed;
     bottom: 20px;
     left: 20px;
     background-color: white;
-    border: 2px solid #2e7d32;
-    border-radius: 8px;
+    border: 1px solid grey;
     z-index: 9999;
-    font-size: 11px;
-    padding: 8px 10px;
-    box-shadow: 3px 3px 10px rgba(0,0,0,0.4);
-    line-height: 1.4em;
-    font-family: Arial, sans-serif;
-    transform: scale(0.9);
-    transform-origin: bottom left;
+    font-size: 10px;
+    padding: 5px;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+    line-height: 1.1em;
+    width: auto;
+    transform: scale(0.75);
+    transform-origin: top left;
 ">
-    <b style="color: #2e7d32;">Leyenda</b><br>
-    <div style="margin-top: 4px;">
-        <i style="background: rgba(76, 175, 80, 0.4); border: 1.5px solid #2e7d32; width: 16px; height: 16px; display: inline-block; border-radius: 3px;"></i>
-        <span style="position: relative; top: -4px; margin-left: 6px;">Red Natura 2000 (LIC / ZEPA)</span><br>
-        
-        <!-- Si añades Montes más adelante: -->
-        <!-- <i style="background: rgba(139, 69, 19, 0.4); border: 1.5px solid #8B4513; width: 16px; height: 16px; display: inline-block; border-radius: 3px;"></i>
-        <span style="position: relative; top: -4px; margin-left: 6px;">Montes UP</span><br> -->
-        
-        <!-- Si añades Vías Pecuarias: -->
-        <!-- <i style="background: orange; width: 16px; height: 2px; display: inline-block; margin-left: 3px; margin-right: 3px;"></i>
-        <span style="position: relative; top: -6px;">Vías Pecuarias</span> -->
+    <b>Leyenda</b><br>
+
+    <div>
+        <span style="display:inline-block;width:20px;height:20px;background:#00FF00;border:1px solid #008000;"></span>
+        Red Natura 2000<br>
+
+        <span style="display:inline-block;width:20px;height:20px;background:#CD853F;border:1px solid #8B4513;"></span>
+        Montes Utilidad Pública<br>
+
+        <span style="display:inline-block;width:20px;height:20px;background:#87CEFA;border:1px solid #0000FF;"></span>
+        Vías Pecuarias<br>
     </div>
 </div>
-{% endmacro %}
+{{% endmacro %}}
 """
 
-    legend = MacroElement()
-    legend._template = Template(legend_html)
-    m.get_root().add_child(legend)
+legend = MacroElement()
+legend._template = legend_html
+m.get_root().add_child(legend)
 
     for afeccion in afecciones:
         folium.Marker([lat, lon], popup=afeccion).add_to(m)
