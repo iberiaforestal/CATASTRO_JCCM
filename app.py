@@ -1213,10 +1213,36 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
         else:
             gdf = gpd.read_file(data)
 
-        # Convertir geom a GeoSeries con CRS
-        geom_gs = gpd.GeoSeries([geom], crs="EPSG:25830")  # ajusta CRS según tu input
-
-        # Asegurar que gdf y geom tienen mismo CRS
+        # === Detectar correctamente el CRS de geom ===
+        if hasattr(geom, "crs") and geom.crs:
+            # La geometría ya trae un CRS válido
+            geom_gs = gpd.GeoSeries([geom], crs=geom.crs)
+        else:
+            # Intento de detección automática según valores
+            try:
+                x = geom.centroid.x
+                y = geom.centroid.y
+        
+                # UTM ETRS89 / EPSG:25830
+                if x > 100000 and y > 4000000:
+                    geom_gs = gpd.GeoSeries([geom], crs="EPSG:25830")
+                else:
+                    # Coordenadas lon/lat - EPSG:4326
+                    geom_gs = gpd.GeoSeries([geom], crs="EPSG:4326")
+            except:
+                # Fallback seguro
+                geom_gs = gpd.GeoSeries([geom], crs="EPSG:4326")
+        
+        # =======================
+        # Normalización de CRS remotos
+        # =======================
+        
+        # Si la capa remota viene sin CRS declarado, asumimos 4326
+        # (la inmensa mayoría de WFS y ArcGIS FeatureServer lo sirven en EPSG:4326)
+        if gdf.crs is None:
+            gdf = gdf.set_crs("EPSG:4326", allow_override=True)
+        
+        # Ahora sí, si difiere del CRS de geom_gs, reproyectamos
         if gdf.crs != geom_gs.crs:
             gdf = gdf.to_crs(geom_gs.crs)
 
@@ -1796,17 +1822,35 @@ def generar_pdf(datos, x, y, filename):
     # === MUP (ya funciona bien, lo dejamos igual) ===
     mup_valor = datos.get("afección MUP", "").strip()
     mup_detectado = []
-    if mup_valor and not mup_valor.startswith("No afecta") and not mup_valor.startswith("Error"):
-        entries = mup_valor.replace("Dentro de MUP:\n", "").split("\n\n")
-        for entry in entries:
-            lines = entry.split("\n")
-            if lines:
-                mup_detectado.append((
-                    lines[0].replace("ID: ", "").strip() if len(lines) > 0 else "N/A",
-                    lines[1].replace("Nombre: ", "").strip() if len(lines) > 1 else "N/A",
-                    lines[2].replace("Municipio: ", "").strip() if len(lines) > 2 else "N/A",
-                    lines[3].replace("Propiedad: ", "").strip() if len(lines) > 3 else "N/A"
-                ))
+    
+    if (
+        mup_valor
+        and not mup_valor.startswith("No afecta")
+        and not mup_valor.startswith("Error")
+    ):
+        # limpiar cabecera y caracteres extra
+        limpio = (
+            mup_valor.replace("Dentro de MUP:", "")
+                     .replace("\r", "")
+                     .strip()
+        )
+    
+        # dividir por líneas no vacías
+        lineas = [l.strip() for l in limpio.split("\n") if l.strip()]
+    
+        # agrupar cada 4 líneas (ID / Nombre / Municipio / Propiedad)
+        for i in range(0, len(lineas), 4):
+            try:
+                id_monte = lineas[i].replace("ID:", "").strip()
+                nombre = lineas[i+1].replace("Nombre:", "").strip()
+                municipio = lineas[i+2].replace("Municipio:", "").strip()
+                propiedad = lineas[i+3].replace("Propiedad:", "").strip()
+    
+                mup_detectado.append((id_monte, nombre, municipio, propiedad))
+            except:
+                pass
+    
+        # ya no necesitamos el texto original
         mup_valor = ""
 
     # Procesar otras afecciones como texto
