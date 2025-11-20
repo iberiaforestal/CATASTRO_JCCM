@@ -1663,14 +1663,26 @@ def generar_pdf(datos, x, y, filename):
     # === VP ===
     vp_detectado = []
     
-    procesar_capa_multiple(
-        vp_url,
-        "afección VP",
-        "No afecta a ninguna Vía Pecuaria",
-        ["COD_VP", "NUM_NOM", "MUNICIPIO", "CLASIF_POR", "ANCH_LEGAL"],
-        vp_detectado
-    )
-    
+    if afeccion_vp and "Dentro de Vía Pecuaria" in afeccion_vp:
+        lineas = [l.strip() for l in afeccion_vp.split("\n") if l.strip()]
+        for linea in lineas:
+            if "COD_VP:" in linea or "NUM_NOM:" in linea or "MUNICIPIO:" in linea or "CLASIF_POR:" in linea or "ANCH_LEGAL:" in linea:
+                partes = linea.split(":", 1)
+                if len(partes) == 2:
+                    valor = partes[1].strip()
+                    # Extraer valores (si hay varios en una línea, los separamos)
+                    cod = "N/A"
+                    nom = "N/A"
+                    mun = "N/A"
+                    cla = "N/A"
+                    anc = "N/A"
+                    for l in lineas:
+                        if "COD_VP:" in l: cod = l.split(":",1)[1].strip()
+                        if "NUM_NOM:" in l: nom = l.split(":",1)[1].strip()
+                        if "MUNICIPIO:" in l: mun = l.split(":",1)[1].strip()
+                        if "CLASIF_POR:" in l: cla = l.split(":",1)[1].strip()
+                        if "ANCH_LEGAL:" in l: anc = l.split(":",1)[1].strip()
+                    vp_detectado.append((cod, nom, mun, cla, anc))
     # === ZEPA ===
     zepa_detectado = []
     zepa_valor = procesar_capa(
