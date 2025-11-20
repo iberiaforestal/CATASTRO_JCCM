@@ -1219,7 +1219,7 @@ def interpretar_coordenadas(x, y):
     return None, None, "INVALIDO"
 
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
-def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
+def consultar_wfs_seguro(rl, geom, nombre_afeccion, campo_nombre=None, campos_mup=None)):
     """
     Consulta WFS o ArcGIS FeatureServer con:
     - Descarga cacheada (_descargar_geojson)
