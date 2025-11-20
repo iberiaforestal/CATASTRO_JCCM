@@ -1244,17 +1244,29 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
         return f"Indeterminado: {nombre_afeccion} (error de datos: {str(e)})"
 
 # === FUNCIÓN AUXILIAR PARA CAPAS CON MÚLTIPLES COLUMNAS (como en Murcia) ===
-def procesar_capa_multiple(url, key_datos, texto_si_no_hay, campos_gis, lista_destino):
+def procesar_capa_multiple(url, key_datos, texto_si_no_hay, campos_gis, lista_destino, query_geom, datos):
     """
-    Usa los datos ya guardados en st.session_state (o donde tengas 'datos')
-    para no volver a descargar.
-    Si hay afección → descarga el GeoJSON, busca las features que intersectan
-    y mete tuplas con los campos pedidos en lista_destino.
+    Versión robusta de procesar_capa_multiple que NO depende de variables globales.
+    Parámetros obligatorios:
+      - url: URL de la capa (WFS o FeatureServer con f=geojson)
+      - key_datos: clave en el diccionario `datos` con el texto ligero (ej. "afección VP")
+      - texto_si_no_hay: texto a devolver si no hay afección
+      - campos_gis: lista de campos que queremos extraer para cada feature
+      - lista_destino: lista donde se añadirán las tuplas encontradas
+      - query_geom: geometría shapely (en ETRS89 / EPSG:25830) con la que intersectar
+      - datos: diccionario con resultados ligeros (para decidir si procesar)
+    Devuelve "" si ha procesado y llenado lista_destino, o el texto_si_no_hay / error.
     """
-    valor_guardado = datos.get(key_datos, "").strip()
+    valor_guardado = datos.get(key_datos, "").strip() if isinstance(datos, dict) else ""
 
-    # Si no hay afección según la consulta ligera → no hacemos nada pesado
-    if not valor_guardado or valor_guardado.startswith("No afecta") or "Indeterminado" in valor_guardado:
+    # Si la comprobación ligera dijo "No afecta" o "Indeterminado", igual puede haber detección real:
+    # para VP y capas críticas forzamos siempre la comprobación detallada (opcional):
+    force_detailed = False
+    # Si quieres forzar detallado para VP/MUP pon force_detailed = True cuando key_datos contenga 'VP' o 'MUP'
+    if "VP" in key_datos or "MUP" in key_datos:
+        force_detailed = True
+
+    if not force_detailed and (not valor_guardado or valor_guardado.startswith("No afecta") or "Indeterminado" in valor_guardado):
         return texto_si_no_hay
 
     try:
@@ -1263,20 +1275,43 @@ def procesar_capa_multiple(url, key_datos, texto_si_no_hay, campos_gis, lista_de
             return "Error al descargar capa"
 
         # Cargar GeoDataFrame
-        if "FeatureServer" in url:
+        if "FeatureServer" in url or "arcgis" in url.lower():
             import json
             js = json.loads(data.getvalue().decode("utf-8"))
-            gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
+            gdf = gpd.GeoDataFrame.from_features(js.get("features", []), crs="EPSG:4326")
         else:
             gdf = gpd.read_file(data)
+
+        # Seguridad: geometrías válidas y no vacías
+        if gdf.empty:
+            return texto_si_no_hay
+
+        # Asegurar que query_geom es una geometría shapely
+        if query_geom is None:
+            return "Error: query_geom no proporcionado"
 
         # Asegurar mismo CRS
         geom_gs = gpd.GeoSeries([query_geom], crs="EPSG:25830")
         if gdf.crs != geom_gs.crs:
-            gdf = gdf.to_crs(geom_gs.crs)
+            try:
+                gdf = gdf.to_crs(geom_gs.crs)
+            except Exception as e:
+                st.error(f"Error al reproyectar la capa: {e}")
+                return "Error al reproyectar capa"
 
         # Intersección
         interseccion = gdf[gdf.intersects(geom_gs.iloc[0])]
+
+        # Depuración (temporal): ver cuántas features hay
+        st.debug = getattr(st, "debug", None)
+        try:
+            # solo mostrar en desarrollo: imprime el valor_guardado y count
+            if hasattr(st, "write"):
+                st.write(f"[DEBUG] {key_datos} -> valor_guardado: '{valor_guardado[:80]}'")
+                st.write(f"[DEBUG] {key_datos} -> features totales: {len(gdf)}, intersectan: {len(interseccion)}")
+        except Exception:
+            pass
+
         if interseccion.empty:
             return texto_si_no_hay
 
@@ -1661,16 +1696,16 @@ def generar_pdf(datos, x, y, filename):
         return valor_inicial if not detectado_list else ""
 
     # === VP ===
-    vp_detectado = []
-    
     procesar_capa_multiple(
         vp_url,
         "afección VP",
         "No afecta a ninguna Vía Pecuaria",
         ["COD_VP", "NUM_NOM", "MUNICIPIO", "CLASIF_POR", "ANCH_LEGAL"],
-        vp_detectado
+        vp_detectado,
+        query_geom,
+        datos
     )
-    
+        
     # === ZEPA ===
     zepa_detectado = []
     zepa_valor = procesar_capa(
