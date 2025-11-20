@@ -1660,27 +1660,27 @@ def generar_pdf(datos, x, y, filename):
                 return "Error al consultar"
         return valor_inicial if not detectado_list else ""
 
-# === CREAR vp_detectado y mup_detectado (PONER JUSTO DESPUÉS DE afeccion_mup = ...) ===
-vp_detectado = []
-mup_detectado = []
-
-# --- VÍAS PECUARIAS ---
-if afeccion_vp and "Dentro de" in afeccion_vp and "No afecta" not in afeccion_vp:
-    nombre_vp = afeccion_vp.split(":", 1)[-1].strip() if ":" in afeccion_vp else afeccion_vp
-    vp_detectado = [("N/A", nombre_vp, provincia_sel or "N/A", "N/A", "N/A")]
-
-# --- MONTES DE UTILIDAD PÚBLICA ---
-if afeccion_mup and "Dentro de MUP" in afeccion_mup:
-    bloques = afeccion_mup.split("\n\n")
-    for bloque in bloques:
-        id_m = nombre = municipio = propiedad = "N/A"
-        for linea in bloque.split("\n"):
-            if linea.startswith("ID:"): id_m = linea.split(":",1)[1].strip()
-            if linea.startswith("Nombre:"): nombre = linea.split(":",1)[1].strip()
-            if linea.startswith("Municipio:"): municipio = linea.split(":",1)[1].strip()
-            if linea.startswith("Propiedad:"): propiedad = linea.split(":",1)[1].strip()
-        if nombre != "N/A":
-            mup_detectado.append((id_m, nombre, municipio, propiedad))
+    # === CREAR vp_detectado y mup_detectado (PONER JUSTO DESPUÉS DE afeccion_mup = ...) ===
+    vp_detectado = []
+    mup_detectado = []
+    
+    # --- VÍAS PECUARIAS ---
+    if afeccion_vp and "Dentro de" in afeccion_vp and "No afecta" not in afeccion_vp:
+        nombre_vp = afeccion_vp.split(":", 1)[-1].strip() if ":" in afeccion_vp else afeccion_vp
+        vp_detectado = [("N/A", nombre_vp, provincia_sel or "N/A", "N/A", "N/A")]
+    
+    # --- MONTES DE UTILIDAD PÚBLICA ---
+    if afeccion_mup and "Dentro de MUP" in afeccion_mup:
+        bloques = afeccion_mup.split("\n\n")
+        for bloque in bloques:
+            id_m = nombre = municipio = propiedad = "N/A"
+            for linea in bloque.split("\n"):
+                if linea.startswith("ID:"): id_m = linea.split(":",1)[1].strip()
+                if linea.startswith("Nombre:"): nombre = linea.split(":",1)[1].strip()
+                if linea.startswith("Municipio:"): municipio = linea.split(":",1)[1].strip()
+                if linea.startswith("Propiedad:"): propiedad = linea.split(":",1)[1].strip()
+            if nombre != "N/A":
+                mup_detectado.append((id_m, nombre, municipio, propiedad))
     
     # Solo incluir MUP, VP, ZEPA, LIC, ENP, ESTEPARIAS, PLANEAMIENTO, TORTUGA, PERDICERA, NUTRIA, FARTET, MALVASIA, GARBANCILLO, FLORA en "otras afecciones" si NO tienen detecciones
     if not flora_detectado:
@@ -2599,7 +2599,7 @@ if afeccion_mup and "Dentro de MUP" in afeccion_mup:
     )
 
     pdf.output(filename)
-        return filename
+    return filename
 
 # Interfaz de Streamlit
 st.image(
