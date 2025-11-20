@@ -1696,6 +1696,7 @@ def generar_pdf(datos, x, y, filename):
         return valor_inicial if not detectado_list else ""
 
     # === VP ===
+    vp_detectado = []
     procesar_capa_multiple(
         vp_url,
         "afección VP",
