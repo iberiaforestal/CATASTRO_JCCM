@@ -2937,10 +2937,7 @@ if submitted:
         afeccion_lic = consultar_wfs_seguro(query_geom, lic_url, "LIC", campo_nombre="site_name")
         afeccion_vp = consultar_wfs_seguro(query_geom, vp_url, "VP", campo_nombre="NUM_NOM")
         afeccion_tm = consultar_wfs_seguro(query_geom, tm_url, "TM", campo_nombre="nameunit")
-        afeccion_mup = consultar_wfs_seguro(
-            query_geom, mup_url, "MUP",
-            campos_mup=["ID:ID", "NOMBRE:Nombre", "TERMINO_M:Municipio", "PROPIEDAD:Propiedad"]
-        )
+        afeccion_mup = consultar_wfs_seguro(query_geom, mup_url, "MUP", campos_mup="NOMBRE:Nombre")
 
         afecciones = [afeccion_flora, afeccion_garbancillo, afeccion_malvasia, afeccion_fartet, afeccion_nutria,
                       afeccion_perdicera, afeccion_tortuga, afeccion_uso_suelo, afeccion_esteparias, afeccion_enp,
