@@ -1793,24 +1793,42 @@ def generar_pdf(datos, x, y, filename):
         flora_detectado
     )
 
-    # === MUP (Montes de Utilidad Pública) ===
+    # === MUP (parser universal robusto) ===
     mup_valor = datos.get("afección MUP", "").strip()
     mup_detectado = []
     
-    if mup_valor and not mup_valor.startswith("No afecta") and not mup_valor.startswith("Error"):
-        mup_texto = mup_valor.replace("Dentro de MUP:\n", "").strip()
-        entries = mup_texto.split("\n\n")
+    if mup_valor and not mup_valor.lower().startswith("no afecta") and not mup_valor.startswith("Error"):
     
-        for entry in entries:
-            lines = entry.split("\n")
-            if lines:
-                mup_detectado.append((
-                    lines[0].replace("ID: ", "").strip() if len(lines) > 0 else "N/A",
-                    lines[1].replace("Nombre: ", "").strip() if len(lines) > 1 else "N/A",
-                    lines[2].replace("Municipio: ", "").strip() if len(lines) > 2 else "N/A",
-                    lines[3].replace("Propiedad: ", "").strip() if len(lines) > 3 else "N/A"
-                ))
+        # Normalizar separadores
+        texto = mup_valor.replace("Dentro de MUP:", "").replace("MUP detectado:", "")
+        texto = texto.replace("\r", "").strip()
     
+        # Separar por líneas que contengan "ID:"
+        bloques = [b.strip() for b in texto.split("ID:") if b.strip()]
+    
+        for bloque in bloques:
+            # reconstruimos la línea ID:
+            linea = "ID:" + bloque
+    
+            # extraer campos
+            def extraer(campo, texto):
+                if campo in texto:
+                    parte = texto.split(campo, 1)[1].strip()
+                    # cortar en delimitadores comunes
+                    for sep in ["|", "\n", "-", ","]:
+                        if sep in parte:
+                            return parte.split(sep)[0].strip()
+                    return parte.strip()
+                return "N/A"
+    
+            id_ = extraer("ID:", linea)
+            nombre = extraer("Nombre:", linea)
+            municipio = extraer("Municipio:", linea)
+            propiedad = extraer("Propiedad:", linea)
+    
+            mup_detectado.append((id_, nombre, municipio, propiedad))
+    
+        # Limpiamos mup_valor para que no se imprima como texto
         mup_valor = ""
 
     # Procesar otras afecciones como texto
