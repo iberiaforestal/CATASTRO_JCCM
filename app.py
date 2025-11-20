@@ -17,7 +17,7 @@ from io import BytesIO
 from staticmap import StaticMap, CircleMarker
 import textwrap
 from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retrymup_valor = datos.get("afección MUP", "").strip()
+from urllib3.util.retry import Retry
 import shutil
 from PIL import Image
 def normalize_name(name):
@@ -1797,11 +1797,8 @@ def generar_pdf(datos, x, y, filename):
     mup_valor = datos.get("afección MUP", "").strip()
     mup_detectado = []
     
-    # Si la afección viene con resultados, los parseamos
     if mup_valor and not mup_valor.startswith("No afecta") and not mup_valor.startswith("Error"):
-        # Eliminamos encabezado estándar
         mup_texto = mup_valor.replace("Dentro de MUP:\n", "").strip()
-        # Cada MUP está separado por doble salto de línea
         entries = mup_texto.split("\n\n")
     
         for entry in entries:
@@ -1814,7 +1811,6 @@ def generar_pdf(datos, x, y, filename):
                     lines[3].replace("Propiedad: ", "").strip() if len(lines) > 3 else "N/A"
                 ))
     
-        # Para evitar que salga texto duplicado en los resultados
         mup_valor = ""
 
     # Procesar otras afecciones como texto
