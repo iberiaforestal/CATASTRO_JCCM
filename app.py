@@ -1780,21 +1780,21 @@ def generar_pdf(datos, x, y, filename):
     )
 
     # === MUP (ya funciona bien, lo dejamos igual) ===
-    mup_detectado = []
-    if afeccion_mup and "Dentro de MUP" in afeccion_mup:
-        bloques = afeccion_mup.split("\n\n")
-        for bloque in bloques:
-            if "ID:" in bloque or "Nombre:" in bloque:
-                id_mup = "N/A"
-                nombre = "N/A"
-                municipio = "N/A"
-                propiedad = "N/A"
-                for linea in bloque.split("\n"):
-                    if "ID:" in linea: id_mup = linea.split(":",1)[1].strip()
-                    if "Nombre:" in linea: nombre = linea.split(":",1)[1].strip()
-                    if "Municipio:" in linea: municipio = linea.split(":",1)[1].strip()
-                    if "Propiedad:" in linea: propiedad = linea.split(":",1)[1].strip()
-                mup_detectado.append((id_mup, nombre, municipio, propiedad))
+    mup_valor = datos.get("afección MUP", "").strip()
+    if afeccion_mup and "Dentro de MUP" in afeccion_mup:
+        bloques = afeccion_mup.split("\n\n")
+        for bloque in bloques:
+            if "ID:" in bloque or "Nombre:" in bloque:
+                id_mup = "N/A"
+                nombre = "N/A"
+                municipio = "N/A"
+                propiedad = "N/A"
+                for linea in bloque.split("\n"):
+                    if "ID:" in linea: id_mup = linea.split(":",1)[1].strip()
+                    if "Nombre:" in linea: nombre = linea.split(":",1)[1].strip()
+                    if "Municipio:" in linea: municipio = linea.split(":",1)[1].strip()
+                    if "Propiedad:" in linea: propiedad = linea.split(":",1)[1].strip()
+                mup_detectado.append((id_mup, nombre, municipio, propiedad))
 
     # Procesar otras afecciones como texto
     otras_afecciones = []
