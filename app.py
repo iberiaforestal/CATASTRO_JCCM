@@ -2599,7 +2599,7 @@ def generar_pdf(datos, x, y, filename):
     )
 
     pdf.output(filename)
-        return filename
+    return filename
 
 # Interfaz de Streamlit
 st.image(
