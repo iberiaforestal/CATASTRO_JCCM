@@ -1263,7 +1263,7 @@ def procesar_capa_multiple(url, key_datos, texto_si_no_hay, campos_gis, lista_de
     # para VP y capas críticas forzamos siempre la comprobación detallada (opcional):
     force_detailed = False
     # Si quieres forzar detallado para VP/MUP pon force_detailed = True cuando key_datos contenga 'VP' o 'MUP'
-    if "VP" in key_datos or "MUP" in key_datos:
+    if "VP" in key_datos:
         force_detailed = True
 
     if not force_detailed and (not valor_guardado or valor_guardado.startswith("No afecta") or "Indeterminado" in valor_guardado):
@@ -1301,16 +1301,6 @@ def procesar_capa_multiple(url, key_datos, texto_si_no_hay, campos_gis, lista_de
 
         # Intersección
         interseccion = gdf[gdf.intersects(geom_gs.iloc[0])]
-
-        # Depuración (temporal): ver cuántas features hay
-        st.debug = getattr(st, "debug", None)
-        try:
-            # solo mostrar en desarrollo: imprime el valor_guardado y count
-            if hasattr(st, "write"):
-                st.write(f"[DEBUG] {key_datos} -> valor_guardado: '{valor_guardado[:80]}'")
-                st.write(f"[DEBUG] {key_datos} -> features totales: {len(gdf)}, intersectan: {len(interseccion)}")
-        except Exception:
-            pass
 
         if interseccion.empty:
             return texto_si_no_hay
