@@ -1903,8 +1903,6 @@ def generar_pdf(datos, x, y, filename):
         col_widths = [30, 50, 40, 40, 30]  # Tus anchos originales
         line_height = 5
 
-        5
-
         # Cabecera
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(*azul_rgb)
