@@ -1780,7 +1780,7 @@ def generar_pdf(datos, x, y, filename):
     )
 
     # === MUP (ya funciona bien, lo dejamos igual) ===
-    mup_valor = datos.get("afección MUP", "").strip()
+    mup_detectado = []
     if afeccion_mup and "Dentro de MUP" in afeccion_mup:
         bloques = afeccion_mup.split("\n\n")
         for bloque in bloques:
