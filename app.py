@@ -1127,11 +1127,35 @@ def cargar_capa_geometrica(url, query_geom):
         return gpd.GeoDataFrame()
 
 def cargar_arcgis_featureserver(url, query_geom):
+    """
+    Consulta un ArcGIS FeatureServer devolviendo GeoDataFrame.
+    Convierte los bounds de EPSG:25830 a EPSG:4326,
+    porque el FeatureServer interpreta geometry en lat/lon.
+    """
+    if query_geom is None:
+        return gpd.GeoDataFrame()
+
+    # Bounds en EPSG:25830 (ETRS89 UTM30)
     minx, miny, maxx, maxy = query_geom.bounds
+
+    # Convertir a EPSG:4326 (lon, lat)
+    try:
+        from pyproj import Transformer
+        transformer = Transformer.from_crs("EPSG:25830", "EPSG:4326", always_xy=True)
+        lon_min, lat_min = transformer.transform(minx, miny)
+        lon_max, lat_max = transformer.transform(maxx, maxy)
+    except Exception:
+        lon_min, lat_min, lon_max, lat_max = minx, miny, maxx, maxy
+
+    # Asegurar orden correcto
+    min_lon = min(lon_min, lon_max)
+    max_lon = max(lon_min, lon_max)
+    min_lat = min(lat_min, lat_max)
+    max_lat = max(lat_min, lat_max)
 
     params = {
         "where": "1=1",
-        "geometry": f"{minx},{miny},{maxx},{maxy}",
+        "geometry": f"{min_lon},{min_lat},{max_lon},{max_lat}",
         "geometryType": "esriGeometryEnvelope",
         "spatialRel": "esriSpatialRelIntersects",
         "outFields": "*",
@@ -1139,17 +1163,19 @@ def cargar_arcgis_featureserver(url, query_geom):
         "f": "geojson"
     }
 
-    r = requests.get(url, params=params, timeout=30)
-    if not r.ok:
-        return gpd.GeoDataFrame()
+    try:
+        r = requests.get(url, params=params, timeout=30)
+        if not r.ok:
+            return gpd.GeoDataFrame()
 
-    data = r.json()
-    if "features" not in data:
-        return gpd.GeoDataFrame()
+        data = r.json()
+        if "features" not in data:
+            return gpd.GeoDataFrame()
 
-    return gpd.GeoDataFrame.from_features(
-        data["features"], crs="EPSG:4326"
-    )
+        return gpd.GeoDataFrame.from_features(data["features"], crs="EPSG:4326")
+
+    except Exception:
+        return gpd.GeoDataFrame()
 
 def procesar_capa(url, nombre, campos, query_geom):
     gdf = cargar_capa_geometrica(url, query_geom)
