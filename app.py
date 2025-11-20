@@ -1870,7 +1870,7 @@ def generar_pdf(datos, x, y, filename):
     if not vp_detectado:
         otras_afecciones.append(("Afección VP", "No afecta a ninguna VP"))
     if not mup_detectado:
-        otras_afecciones.append(("Afección MUP", mup_valor if mup_valor else "No afecta a ningún MUP"))
+        otras_afecciones.append(("Afección MUP", "No afecta a ningún MUP"))
 
     # Mostrar otras afecciones con títulos en negrita    
     if otras_afecciones:
