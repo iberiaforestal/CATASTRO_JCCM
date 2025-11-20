@@ -1722,7 +1722,19 @@ def generar_pdf(datos, x, y, filename):
         query_geom,
         datos
     )
-        
+
+    # === MUP (ya funciona bien, lo dejamos igual) ===
+    mup_detectado = []
+    procesar_capa_multiple(
+        mup_url,
+        "afección MUP",
+        "No afecta a ningun Monte de Utilidad Pública",
+        ["ID", "NOMBRE", "MUNICIPIO", "PROPIEDAD"],
+        mup_detectado,
+        query_geom,
+        datos
+    )
+       
     # === ZEPA ===
     zepa_detectado = []
     zepa_valor = procesar_capa(
@@ -1818,40 +1830,6 @@ def generar_pdf(datos, x, y, filename):
         ["tipo", "nombre"],
         flora_detectado
     )
-
-    # === MUP (ya funciona bien, lo dejamos igual) ===
-    mup_valor = datos.get("afección MUP", "").strip()
-    mup_detectado = []
-    
-    if (
-        mup_valor
-        and not mup_valor.startswith("No afecta")
-        and not mup_valor.startswith("Error")
-    ):
-        # limpiar cabecera y caracteres extra
-        limpio = (
-            mup_valor.replace("Dentro de MUP:", "")
-                     .replace("\r", "")
-                     .strip()
-        )
-    
-        # dividir por líneas no vacías
-        lineas = [l.strip() for l in limpio.split("\n") if l.strip()]
-    
-        # agrupar cada 4 líneas (ID / Nombre / Municipio / Propiedad)
-        for i in range(0, len(lineas), 4):
-            try:
-                id_monte = lineas[i].replace("ID:", "").strip()
-                nombre = lineas[i+1].replace("Nombre:", "").strip()
-                municipio = lineas[i+2].replace("Municipio:", "").strip()
-                propiedad = lineas[i+3].replace("Propiedad:", "").strip()
-    
-                mup_detectado.append((id_monte, nombre, municipio, propiedad))
-            except:
-                pass
-    
-        # ya no necesitamos el texto original
-        mup_valor = ""
 
     # Procesar otras afecciones como texto
     otras_afecciones = []
