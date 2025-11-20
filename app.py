@@ -2599,7 +2599,7 @@ if afeccion_mup and "Dentro de MUP" in afeccion_mup:
     )
 
     pdf.output(filename)
-    return filename
+            return filename
 
 # Interfaz de Streamlit
 st.image(
