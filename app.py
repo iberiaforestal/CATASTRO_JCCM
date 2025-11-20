@@ -2923,21 +2923,27 @@ if submitted:
         }
 
         # === 6. CONSULTAR AFECCIONES ===
-        afeccion_flora = consultar_wfs_seguro(flora_url, query_geom, "FLORA", campo_nombre="tipo")
-        afeccion_garbancillo = consultar_wfs_seguro(garbancillo_url, query_geom, "GARBANCILLO", campo_nombre="tipo")
-        afeccion_malvasia = consultar_wfs_seguro(malvasia_url, query_geom, "MALVASIA", campo_nombre="clasificac")
-        afeccion_fartet = consultar_wfs_seguro(fartet_url, query_geom, "FARTET", campo_nombre="clasificac")
-        afeccion_nutria = consultar_wfs_seguro(nutria_url, query_geom, "NUTRIA", campo_nombre="tipo_de_ar")
-        afeccion_perdicera = consultar_wfs_seguro(perdicera_url, query_geom, "ÁGUILA PERDICERA", campo_nombre="zona")
-        afeccion_tortuga = consultar_wfs_seguro(tortuga_url, query_geom, "TORTUGA MORA", campo_nombre="cat_desc")
-        afeccion_uso_suelo = consultar_wfs_seguro(uso_suelo_url, query_geom, "PLANEAMIENTO", Campo_nombre="Clasificacion")
-        afeccion_esteparias = consultar_wfs_seguro(esteparias_url, query_geom, "ESTEPARIAS", campo_nombre="nombre")
-        afeccion_enp = consultar_wfs_seguro(enp_url, query_geom, "ENP", campo_nombre="nombre")
-        afeccion_zepa = consultar_wfs_seguro(zepa_url, query_geom, "ZEPA", campo_nombre="site_name")
-        afeccion_lic = consultar_wfs_seguro(lic_url, query_geom, "LIC", campo_nombre="site_name")
-        afeccion_vp = consultar_wfs_seguro(vp_url, query_geom, "VP", campo_nombre="NUM_NOM")
-        afeccion_tm = consultar_wfs_seguro(tm_url, query_geom, "TM", campo_nombre="nameunit")
-        afeccion_mup = consultar_wfs_seguro(mup_url, query_geom, "MUP", campos_mup=["ID:ID", "NOMBRE:Nombre", "TERMINO_M:Municipio", "PROPIEDAD:Propiedad"])
+        afeccion_flora        = consultar_wfs_seguro(flora_url,        query_geom, "FLORA",            campo_nombre="tipo")
+        afeccion_garbancillo  = consultar_wfs_seguro(garbancillo_url,  query_geom, "GARBANCILLO",      campo_nombre="tipo")
+        afeccion_malvasia     = consultar_wfs_seguro(malvasia_url,     query_geom, "MALVASIA",         campo_nombre="clasificac")
+        afeccion_fartet       = consultar_wfs_seguro(fartet_url,       query_geom, "FARTET",           campo_nombre="clasificac")
+        afeccion_nutria       = consultar_wfs_seguro(nutria_url,       query_geom, "NUTRIA",           campo_nombre="tipo_de_ar")
+        afeccion_perdicera    = consultar_wfs_seguro(perdicera_url,    query_geom, "ÁGUILA PERDICERA", campo_nombre="zona")
+        afeccion_tortuga      = consultar_wfs_seguro(tortuga_url,      query_geom, "TORTUGA MORA",     campo_nombre="cat_desc")
+        afeccion_uso_suelo    = consultar_wfs_seguro(uso_suelo_url,    query_geom, "PLANEAMIENTO",     campo_nombre="Clasificacion")
+        afeccion_esteparias   = consultar_wfs_seguro(esteparias_url,   query_geom, "ESTEPARIAS",       campo_nombre="nombre")
+        afeccion_enp          = consultar_wfs_seguro(enp_url,          query_geom, "ENP",              campo_nombre="nombre")
+        afeccion_zepa         = consultar_wfs_seguro(zepa_url,         query_geom, "ZEPA",             campo_nombre="site_name")
+        afeccion_lic          = consultar_wfs_seguro(lic_url,          query_geom, "LIC",              campo_nombre="site_name")
+        afeccion_vp           = consultar_wfs_seguro(vp_url,           query_geom, "VP",               campo_nombre="NUM_NOM")
+        afeccion_tm           = consultar_wfs_seguro(tm_url,           query_geom, "TM",               campo_nombre="nameunit")
+        
+        afeccion_mup = consultar_wfs_seguro(
+            mup_url,
+            query_geom,
+            "MUP",
+            campos_mup=["ID:ID", "NOMBRE:Nombre", "TERMINO_M:Municipio", "PROPIEDAD:Propiedad"]
+        )
         
         afecciones = [
             afeccion_flora, afeccion_garbancillo, afeccion_malvasia, afeccion_fartet, afeccion_nutria,
