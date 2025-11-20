@@ -1660,140 +1660,28 @@ def generar_pdf(datos, x, y, filename):
                 return "Error al consultar"
         return valor_inicial if not detectado_list else ""
 
-    # === VP ===
-    vp_detectado = []
+# === CREAR vp_detectado y mup_detectado (PONER JUSTO DESPUÉS DE afeccion_mup = ...) ===
+vp_detectado = []
+mup_detectado = []
+
+# --- VÍAS PECUARIAS ---
+if afeccion_vp and "Dentro de" in afeccion_vp and "No afecta" not in afeccion_vp:
+    nombre_vp = afeccion_vp.split(":", 1)[-1].strip() if ":" in afeccion_vp else afeccion_vp
+    vp_detectado = [("N/A", nombre_vp, provincia_sel or "N/A", "N/A", "N/A")]
+
+# --- MONTES DE UTILIDAD PÚBLICA ---
+if afeccion_mup and "Dentro de MUP" in afeccion_mup:
+    bloques = afeccion_mup.split("\n\n")
+    for bloque in bloques:
+        id_m = nombre = municipio = propiedad = "N/A"
+        for linea in bloque.split("\n"):
+            if linea.startswith("ID:"): id_m = linea.split(":",1)[1].strip()
+            if linea.startswith("Nombre:"): nombre = linea.split(":",1)[1].strip()
+            if linea.startswith("Municipio:"): municipio = linea.split(":",1)[1].strip()
+            if linea.startswith("Propiedad:"): propiedad = linea.split(":",1)[1].strip()
+        if nombre != "N/A":
+            mup_detectado.append((id_m, nombre, municipio, propiedad))
     
-    procesar_capa_multiple(
-        vp_url,
-        "afección VP",
-        "No afecta a ninguna Vía Pecuaria",
-        ["COD_VP", "NUM_NOM", "MUNICIPIO", "CLASIF_POR", "ANCH_LEGAL"],
-        vp_detectado
-    )
-    
-    # === ZEPA ===
-    zepa_detectado = []
-    zepa_valor = procesar_capa(
-        zepa_url, "afección ZEPA", "No afecta a ninguna Zona de especial protección para las aves",
-        ["site_code", "site_name"],
-        zepa_detectado
-    )
-
-    # === LIC ===
-    lic_detectado = []
-    lic_valor = procesar_capa(
-        lic_url, "afección LIC", "No afecta a ningún Lugar de Interés Comunitario",
-        ["site_code", "site_name"],
-        lic_detectado
-    )
-
-    # === ENP ===
-    enp_detectado = []
-    enp_valor = procesar_capa(
-        enp_url, "afección ENP", "No afecta a ningún Espacio Natural Protegido",
-        ["nombre", "figura"],
-        enp_detectado
-    )
-
-    # === ESTEPARIAS ===
-    esteparias_detectado = []
-    esteparias_valor = procesar_capa(
-        esteparias_url, "afección esteparias", "No afecta a zona de distribución de aves esteparias",
-        ["cuad_10km", "especie", "nombre"],
-        esteparias_detectado
-    )
-
-    # === USO DEL SUELO ===
-    uso_suelo_detectado = []
-    uso_suelo_valor = procesar_capa(
-        uso_suelo_url, "afección uso_suelo", "No afecta a ningún uso del suelo protegido",
-        ["Uso_Especifico", "Clasificacion"],
-        uso_suelo_detectado
-    )
-    
-    # === TORTUGA MORA ===
-    tortuga_detectado = []
-    tortuga_valor = procesar_capa(
-        tortuga_url, "afección tortuga", "No afecta al Plan de Recuperación de la tortuga mora",
-        ["cat_id", "cat_desc"],
-        tortuga_detectado
-    )
-
-    # === AGUILA PERDICERA ===
-    perdicera_detectado = []
-    perdicera_valor = procesar_capa(
-        perdicera_url, "afección perdicera", "No afecta al Plan de Recuperación del águila perdicera",
-        ["zona", "nombre"],
-        perdicera_detectado
-    )
-
-    # === NUTRIA ===
-    nutria_detectado = []
-    nutria_valor = procesar_capa(
-        nutria_url, "afección nutria", "No afecta al Plan de Recuperación de la nutria",
-        ["tipo_de_ar", "nombre"],
-        nutria_detectado
-    )    
-
-    # === FARTET ===
-    fartet_detectado = []
-    fartet_valor = procesar_capa(
-        fartet_url, "afección fartet", "No afecta al Plan de Recuperación del fartet",
-        ["clasificac", "nombre"],
-        fartet_detectado
-    )
-
-    # === MALVASIA ===
-    malvasia_detectado = []
-    malvasia_valor = procesar_capa(
-        malvasia_url, "afección malvasia", "No afecta al Plan de Recuperación de la malvasia",
-        ["clasificac", "nombre"],
-        malvasia_detectado
-    )
-
-    # === GARBANCILLO ===
-    garbancillo_detectado = []
-    garbancillo_valor = procesar_capa(
-        garbancillo_url, "afección garbancillo", "No afecta al Plan de Recuperación del garbancillo",
-        ["tipo", "nombre"],
-        garbancillo_detectado
-    )
-
-    # === FLORA ===
-    flora_detectado = []
-    flora_valor = procesar_capa(
-        flora_url, "afección flora", "No afecta al Plan de Recuperación de flora",
-        ["tipo", "nombre"],
-        flora_detectado
-    )
-
-    # === MUP (ya funciona bien, lo dejamos igual) ===
-    mup_valor = datos.get("afección MUP", "").strip()
-    mup_detectado = []
-    if mup_valor and not mup_valor.startswith("No afecta") and not mup_valor.startswith("Error"):
-        entries = mup_valor.replace("Dentro de MUP:\n", "").split("\n\n")
-        for entry in entries:
-            lines = entry.split("\n")
-            if lines:
-                mup_detectado.append((
-                    lines[0].replace("ID: ", "").strip() if len(lines) > 0 else "N/A",
-                    lines[1].replace("Nombre: ", "").strip() if len(lines) > 1 else "N/A",
-                    lines[2].replace("Municipio: ", "").strip() if len(lines) > 2 else "N/A",
-                    lines[3].replace("Propiedad: ", "").strip() if len(lines) > 3 else "N/A"
-                ))
-        mup_valor = ""
-
-    # Procesar otras afecciones como texto
-    otras_afecciones = []
-    for key in afecciones_keys:
-        valor = datos.get(key, "").strip()
-        key_corregido = key  # ← SIN .replace()
-    
-        if valor and not valor.startswith("Error"):
-            otras_afecciones.append((key_corregido, valor))
-        else:
-            otras_afecciones.append((key_corregido, valor if valor else "No afecta"))
-
     # Solo incluir MUP, VP, ZEPA, LIC, ENP, ESTEPARIAS, PLANEAMIENTO, TORTUGA, PERDICERA, NUTRIA, FARTET, MALVASIA, GARBANCILLO, FLORA en "otras afecciones" si NO tienen detecciones
     if not flora_detectado:
         otras_afecciones.append(("Afección a flora", flora_valor if flora_valor else "No afecta a Plan de Recuperación de flora"))
