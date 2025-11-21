@@ -2187,14 +2187,14 @@ def generar_pdf(datos, x, y, filename):
 
         # --- FILAS ---
         pdf.set_font("Arial", "", 10)
-        for nombre, figura in enp_detectado:
-            nombre = str(nombre)
-            figura = str(figura)
+        for NOMBRE, FIGURA in enp_detectado:
+            NOMBRE = str(NOMBRE)
+            FIGURA = str(FIGURA)
 
             # Calcular líneas necesarias
-            nombre_lines = len(pdf.multi_cell(col_widths[0], line_height, nombre, split_only=True))
-            figura_lines = len(pdf.multi_cell(col_widths[1], line_height, figura, split_only=True))
-            row_height = max(5, nombre_lines * line_height, figura_lines * line_height)
+            NOMBRE_lines = len(pdf.multi_cell(col_widths[0], line_height, NOMBRE, split_only=True))
+            FIGURA_lines = len(pdf.multi_cell(col_widths[1], line_height, FIGURA, split_only=True))
+            row_height = max(5, NOMBRE_lines * line_height, FIGURA_lines * line_height)
 
             x = pdf.get_x()
             y = pdf.get_y()
@@ -2204,11 +2204,11 @@ def generar_pdf(datos, x, y, filename):
             pdf.rect(x + col_widths[0], y, col_widths[1], row_height)
 
             # Texto centrado verticalmente
-            pdf.set_xy(x, y + (row_height - nombre_lines * line_height) / 2)
-            pdf.multi_cell(col_widths[0], line_height, nombre)
+            pdf.set_xy(x, y + (row_height - NOMBRE_lines * line_height) / 2)
+            pdf.multi_cell(col_widths[0], line_height, NOMBRE)
 
-            pdf.set_xy(x + col_widths[0], y + (row_height - figura_lines * line_height) / 2)
-            pdf.multi_cell(col_widths[1], line_height, figura)
+            pdf.set_xy(x + col_widths[0], y + (row_height - FIGURA_lines * line_height) / 2)
+            pdf.multi_cell(col_widths[1], line_height, FIGURA)
 
             pdf.set_y(y + row_height)
 
