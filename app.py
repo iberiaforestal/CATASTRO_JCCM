@@ -2830,62 +2830,6 @@ with st.form("formulario"):
     objeto = st.text_area("Objeto de la solicitud", max_chars=255)
     
     submitted = st.form_submit_button("Generar informe")
-
-# === PRUEBA MÍNIMA – PÉGALA JUSTO DESPUÉS DE "submitted = st.form_submit_button..." ===
-if submitted:
-    st.write("DEBUG: Entramos en submitted")  # ← Debe aparecer
-    
-    # Forzamos coordenadas conocidas que SÉ que tienen MUP y VP
-    x, y = 678000.0, 4239000.0  # Parcela en Albacete con MUP y vía pecuaria
-    
-    # Transformamos
-    from pyproj import Transformer
-    transformer = Transformer.from_crs("EPSG:25830", "EPSG:4326", always_xy=True)
-    lon, lat = transformer.transform(x, y)
-    st.write(f"Coordenadas forzadas: X={x}, Y={y} → Lon={lon:.6f}, Lat={lat:.6f}")
-    
-    # Creamos punto
-    from shapely.geometry import Point
-    query_geom = Point(x, y)
-    
-    # URLs críticas
-    mup_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services/montes_utilidad_publica/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
-    vp_url  = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services/vias_pecuarias_ejes_aprox/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson"
-    
-    st.write("Probando solo MUP y VP con estas URLs...")
-    
-    import geopandas as gpd
-    import requests
-    
-    try:
-        r = requests.get(mup_url, timeout=20)
-        st.write(f"MUP status: {r.status_code}")
-        data = r.json()
-        gdf_mup = gpd.GeoDataFrame.from_features(data["features"], crs="EPSG:4326")
-        gdf_mup = gdf_mup.to_crs("EPSG:25830")
-        st.write(f"MUP cargado: {len(gdf_mup)} features")
-        if gdf_mup.intersects(query_geom).any():
-            st.success("MUP DETECTADO CON ÉXITO")
-        else:
-            st.error("MUP NO detectado")
-    except Exception as e:
-        st.error(f"Error MUP: {e}")
-    
-    try:
-        r = requests.get(vp_url, timeout=20)
-        st.write(f"VP status: {r.status_code}")
-        data = r.json()
-        gdf_vp = gpd.GeoDataFrame.from_features(data["features"], crs="EPSG:4326")
-        gdf_vp = gdf_vp.to_crs("EPSG:25830")
-        st.write(f"VP cargado: {len(gdf_vp)} features")
-        if gdf_vp.intersects(query_geom.buffer(50)).any():  # buffer 50m porque es eje
-            st.success("VP DETECTADA CON ÉXITO")
-        else:
-            st.error("VP NO detectada")
-    except Exception as e:
-        st.error(f"Error VP: {e}")
-    
-    st.stop()  # Para que no siga generando PDF
     
 # === 1. LIMPIAR ARCHIVOS DE BÚSQUEDAS ANTERIORES ===
 for key in ['mapa_html', 'pdf_file']:
