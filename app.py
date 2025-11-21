@@ -1755,7 +1755,7 @@ def generar_pdf(datos, x, y, filename):
     enp_detectado = []
     enp_valor = procesar_capa(
         enp_url, "afección ENP", "No afecta a ningún Espacio Natural Protegido",
-        ["nombre", "figura"],
+        ["NOMBRE", "FIGURA"],
         enp_detectado
     )
 
@@ -2875,7 +2875,7 @@ if submitted:
         tortuga_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_DES_BIOTA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_DES_BIOTA_CARM:tortuga_distribucion_2001&outputFormat=application/json"
         uso_suelo_url = "https://mapas-gis-inter.carm.es/geoserver/SIT_USU_PLA_URB_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIT_USU_PLA_URB_CARM:plu_ze_37_mun_uso_suelo&outputFormat=application/json"
         esteparias_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_DES_BIOTA_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_DES_BIOTA_CARM:esteparias_ceea_2019_10x10&outputFormat=application/json"
-        enp_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:ENP&outputFormat=application/json"
+        enp_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services/eennpp_limites/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
         zepa_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:ZEPA&outputFormat=application/json"
         lic_url = "https://mapas-gis-inter.carm.es/geoserver/SIG_LUP_SITES_CARM/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=SIG_LUP_SITES_CARM:LIC-ZEC&outputFormat=application/json"
         vp_url = "https://services-eu1.arcgis.com/LVA9E9zjh6QfM7Mo/arcgis/rest/services/vias_pecuarias_ejes_aprox/FeatureServer/1/query?outFields=*&where=1%3D1&f=geojson"
@@ -2906,7 +2906,7 @@ if submitted:
         afeccion_tortuga = consultar_wfs_seguro(query_geom, tortuga_url, "TORTUGA MORA", campo_nombre="cat_desc")
         afeccion_uso_suelo = consultar_wfs_seguro(query_geom, uso_suelo_url, "PLANEAMIENTO", campo_nombre="Clasificacion")
         afeccion_esteparias = consultar_wfs_seguro(query_geom, esteparias_url, "ESTEPARIAS", campo_nombre="nombre")
-        afeccion_enp = consultar_wfs_seguro(query_geom, enp_url, "ENP", campo_nombre="nombre")
+        afeccion_enp = consultar_wfs_seguro(query_geom, enp_url, "ENP", campo_nombre="NOMBRE")
         afeccion_zepa = consultar_wfs_seguro(query_geom, zepa_url, "ZEPA", campo_nombre="site_name")
         afeccion_lic = consultar_wfs_seguro(query_geom, lic_url, "LIC", campo_nombre="site_name")
         afeccion_vp = consultar_wfs_seguro(query_geom, vp_url, "VP", campo_nombre="NUM_NOM")
