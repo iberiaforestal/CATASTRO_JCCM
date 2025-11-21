@@ -1300,12 +1300,11 @@ def procesar_capa_multiple(url, key_datos, texto_si_no_hay, campos_gis, lista_de
         if data is None:
             return "Error al descargar capa"
 
-        # Cargar GeoDataFrame
-        if "FeatureServer" in url or "arcgis" in url.lower():
-            import json
-            js = json.loads(data.getvalue().decode("utf-8"))
-            gdf = gpd.GeoDataFrame.from_features(js.get("features", []), crs="EPSG:4326")
+        # Cargar capa según tipo
+        if "FeatureServer" in url or "arcgis.com" in url:
+            gdf = cargar_arcgis_featureserver(url, query_geom)
         else:
+            data = _descargar_geojson(url)
             gdf = gpd.read_file(data)
 
         # Seguridad: geometrías válidas y no vacías
@@ -1698,7 +1697,7 @@ def generar_pdf(datos, x, y, filename):
                 data = _descargar_geojson(url)
                 if data is None:
                     return "Error al consultar"
-                gdf = gpd.read_file(data)
+                gdf = cargar_capa_geometrica(url, query_geom)
                 seleccion = gdf[gdf.intersects(query_geom)]
                 if not seleccion.empty:
                     for _, props in seleccion.iterrows():
