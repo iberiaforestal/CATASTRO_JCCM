@@ -1305,7 +1305,7 @@ def procesar_capa_multiple(url, key_datos, texto_si_no_hay, campos_gis, lista_de
             gdf = cargar_arcgis_featureserver(url, query_geom)
         else:
             data = _descargar_geojson(url)
-            gdf = gpd.read_file(data)
+            gdf = cargar_capa_geometrica(url, query_geom)
 
         # Seguridad: geometrías válidas y no vacías
         if gdf.empty:
