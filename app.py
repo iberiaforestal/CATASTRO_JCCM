@@ -1692,29 +1692,42 @@ def generar_pdf(datos, x, y, filename):
 # === PROCESAR TODAS LAS CAPAS (VP, ZEPA, LIC, ENP) ===
     def procesar_capa(url, key, valor_inicial, campos, detectado_list):
         valor = datos.get(key, "").strip()
-        if valor and not valor.startswith("No afecta") and not valor.startswith("Error"):
-            try:
+            if valor and not valor.startswith("No afecta") and not valor.startswith("Error"):
+                try:
                 data = _descargar_geojson(url)
                 if data is None:
                     return "Error al consultar"
+
                 gdf = gpd.read_file(data)
+
+                # === DETERMINAR CRS DE LA GEOMETRÍA DE CONSULTA ===
+                if hasattr(query_geom, "crs") and query_geom.crs:
+                    geom_crs = query_geom.crs
+                else:
+                    cx, cy = query_geom.centroid.x, query_geom.centroid.y
+                    geom_crs = "EPSG:25830" if (cx > 100000 and cy > 4000000) else "EPSG:4326"
+
+                # === NORMALIZAR CRS DE LA CAPA DESCARGADA ===
                 if gdf.crs is None:
                     gdf = gdf.set_crs("EPSG:4326")
-                if gdf.crs != query_geom.crs:
-                    gdf = gdf.to_crs(query_geom.crs)
-                
+    
+                # === REPROYECTAR SI ES NECESARIO ===
+                if gdf.crs != geom_crs:
+                    gdf = gdf.to_crs(geom_crs)
+    
+                # === INTERSECCIÓN ===
                 seleccion = gdf[gdf.intersects(query_geom)]
                 if not seleccion.empty:
                     for _, props in seleccion.iterrows():
                         fila = tuple(props.get(campo, "N/A") for campo in campos)
                         detectado_list.append(fila)
-                    return ""
+                    return ""  # Detectado → se muestra tabla
                 return valor_inicial
             except Exception as e:
                 st.error(f"Error al procesar {key}: {e}")
                 return "Error al consultar"
-        return valor_inicial if not detectado_list else ""
 
+        return valor_inicial if not detectado_list else ""
     # === VP ===
     vp_detectado = []
     procesar_capa_multiple(
