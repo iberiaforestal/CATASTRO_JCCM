@@ -1073,7 +1073,6 @@ def transformar_coordenadas(x, y):
 
 # Función para consultar si la geometría intersecta con algún polígono del GeoJSON
 # === FUNCIÓN DESCARGA CON CACHÉ ===
-@st.cache_data(show_spinner=False, ttl=604800)  # 7 días
 def _descargar_geojson(url):
     try:
         response = session.get(url, timeout=30)
@@ -1082,7 +1081,7 @@ def _descargar_geojson(url):
     except Exception as e:
         if not hasattr(st, "_wfs_warnings"):
             st._wfs_warnings = set()
-        warning_key = url.split('/')[-1]
+        warning_key = url.split('/')[-1].split('?')[0]
         if warning_key not in st._wfs_warnings:
             st.warning(f"Servicio no disponible: {warning_key}")
             st._wfs_warnings.add(warning_key)
