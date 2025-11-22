@@ -1698,6 +1698,11 @@ def generar_pdf(datos, x, y, filename):
                 if data is None:
                     return "Error al consultar"
                 gdf = gpd.read_file(data)
+                if gdf.crs is None:
+                    gdf = gdf.set_crs("EPSG:4326")
+                if gdf.crs != query_geom.crs:
+                    gdf = gdf.to_crs(query_geom.crs)
+                
                 seleccion = gdf[gdf.intersects(query_geom)]
                 if not seleccion.empty:
                     for _, props in seleccion.iterrows():
