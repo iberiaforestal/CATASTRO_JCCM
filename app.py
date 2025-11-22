@@ -1269,74 +1269,6 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
     except Exception as e:
         return f"Indeterminado: {nombre_afeccion} (error de datos: {str(e)})"
 
-# === FUNCIÓN AUXILIAR PARA CAPAS CON MÚLTIPLES COLUMNAS (como en Murcia) ===
-def procesar_capa_multiple(url, key_datos, texto_si_no_hay, campos_gis, lista_destino, query_geom, datos):
-    """
-    Versión robusta de procesar_capa_multiple que NO depende de variables globales.
-    Parámetros obligatorios:
-      - url: URL de la capa (WFS o FeatureServer con f=geojson)
-      - key_datos: clave en el diccionario `datos` con el texto ligero (ej. "afección VP")
-      - texto_si_no_hay: texto a devolver si no hay afección
-      - campos_gis: lista de campos que queremos extraer para cada feature
-      - lista_destino: lista donde se añadirán las tuplas encontradas
-      - query_geom: geometría shapely (en ETRS89 / EPSG:25830) con la que intersectar
-      - datos: diccionario con resultados ligeros (para decidir si procesar)
-    Devuelve "" si ha procesado y llenado lista_destino, o el texto_si_no_hay / error.
-    """
-    valor_guardado = datos.get(key_datos, "").strip() if isinstance(datos, dict) else ""
-
-    # Si la comprobación ligera dijo "No afecta" o "Indeterminado", igual puede haber detección real:
-    # para VP y capas críticas forzamos siempre la comprobación detallada (opcional):
-    force_detailed = False
-    # Si quieres forzar detallado para VP/MUP pon force_detailed = True cuando key_datos contenga 'VP' o 'MUP'
-    if "VP" in key_datos:
-        force_detailed = True
-
-    if not force_detailed and (not valor_guardado or valor_guardado.startswith("No afecta") or "Indeterminado" in valor_guardado):
-        return texto_si_no_hay
-
-    try:
-        data = _descargar_geojson(url)
-        if data is None:
-            return "Error al descargar capa"
-
-        # Cargar capa según tipo
-            gdf = cargar_capa_geometrica(url, query_geom)
-
-        # Seguridad: geometrías válidas y no vacías
-        if gdf.empty:
-            return texto_si_no_hay
-
-        # Asegurar que query_geom es una geometría shapely
-        if query_geom is None:
-            return "Error: query_geom no proporcionado"
-
-        # Asegurar mismo CRS
-        geom_gs = gpd.GeoSeries([query_geom], crs="EPSG:25830")
-        if gdf.crs != geom_gs.crs:
-            try:
-                gdf = gdf.to_crs(geom_gs.crs)
-            except Exception as e:
-                st.error(f"Error al reproyectar la capa: {e}")
-                return "Error al reproyectar capa"
-
-        # Intersección
-        interseccion = gdf[gdf.intersects(geom_gs.iloc[0])]
-
-        if interseccion.empty:
-            return texto_si_no_hay
-
-        # Rellenar la lista con tuplas
-        for _, row in interseccion.iterrows():
-            fila = tuple(str(row.get(campo, "N/A")).strip() for campo in campos_gis)
-            lista_destino.append(fila)
-
-        return ""  # éxito silencioso
-
-    except Exception as e:
-        st.error(f"Error procesando {key_datos}: {e}")
-        return "Error al procesar capa"
-
 # Función para crear el mapa con afecciones específicas
 def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     if lon is None or lat is None:
@@ -1752,7 +1684,7 @@ def procesar_capa(url, key, valor_inicial, campos, detectado_list, query_geom, d
     )
     # === MUP (ya funciona bien, lo dejamos igual) ===
     mup_detectado = []
-    mup_valor = procesar_procesar_capa(
+    mup_valor = procesar_capa(
         mup_url,
         "afección MUP",
         "No afecta a ningun Monte de Utilidad Pública",
