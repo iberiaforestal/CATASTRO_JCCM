@@ -1195,17 +1195,15 @@ def interpretar_coordenadas(x, y):
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
     """
-    Consulta WFS o ArcGIS FeatureServer con:
-    - Descarga cacheada (_descargar_geojson)
-    - Geometría shapely (Polygon o MultiPolygon)
-    - Manejo de campos MUP o normales
+    Versión definitiva: devuelve siempre una lista de strings (como el resto de capas)
+    Soporta MUP con campos personalizados y modo normal.
     """
     data = _descargar_geojson(url)
     if data is None:
-        return f"Indeterminado: {nombre_afeccion} (servicio no disponible)"
+        return []
 
     try:
-        # Cargar capa correctamente según tipo
+        # Cargar GeoJSON / FeatureServer
         if "FeatureServer" in url:
             import json
             js = json.loads(data.getvalue().decode("utf-8"))
@@ -1213,61 +1211,58 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
         else:
             gdf = gpd.read_file(data)
 
-        # === Detectar correctamente el CRS de geom ===
+        if gdf.empty:
+            return []
+
+        # === Detectar CRS de la geometría de entrada ===
         if hasattr(geom, "crs") and geom.crs:
-            # La geometría ya trae un CRS válido
-            geom_gs = gpd.GeoSeries([geom], crs=geom.crs)
+            geom_crs = geom.crs
         else:
-            # Intento de detección automática según valores
+            # Detección automática por valores
             try:
-                x = geom.centroid.x
-                y = geom.centroid.y
-        
-                # UTM ETRS89 / EPSG:25830
-                if x > 100000 and y > 4000000:
-                    geom_gs = gpd.GeoSeries([geom], crs="EPSG:25830")
-                else:
-                    # Coordenadas lon/lat - EPSG:4326
-                    geom_gs = gpd.GeoSeries([geom], crs="EPSG:4326")
+                cx, cy = geom.centroid.x, geom.centroid.y
+                geom_crs = "EPSG:25830" if (cx > 100000 and cy > 4000000) else "EPSG:4326"
             except:
-                # Fallback seguro
-                geom_gs = gpd.GeoSeries([geom], crs="EPSG:4326")
-        
-        # =======================
-        # Normalización de CRS remotos
-        # =======================
-        
-        # Si la capa remota viene sin CRS declarado, asumimos 4326
-        # (la inmensa mayoría de WFS y ArcGIS FeatureServer lo sirven en EPSG:4326)
+                geom_crs = "EPSG:4326"
+
+        geom_gs = gpd.GeoSeries([geom], crs=geom_crs)
+
+        # Normalizar CRS de la capa remota
         if gdf.crs is None:
-            gdf = gdf.set_crs("EPSG:4326", allow_override=True)
-        
-        # Ahora sí, si difiere del CRS de geom_gs, reproyectamos
-        if gdf.crs != geom_gs.crs:
-            gdf = gdf.to_crs(geom_gs.crs)
+            gdf = gdf.set_crs("EPSG:4326")
+        if gdf.crs != geom_crs:
+            gdf = gdf.to_crs(geom_crs)
 
         # Intersección
         seleccion = gdf[gdf.intersects(geom_gs.iloc[0])]
-
         if seleccion.empty:
-            return f"No afecta a {nombre_afeccion}"
+            return []
 
-        # --- MODO MUP: campos personalizados ---
+        resultados = []
+
+        # === MODO MUP: campos personalizados ===
         if campos_mup:
-            info = []
             for _, row in seleccion.iterrows():
-                valores = [str(row.get(c.split(':')[0], "Desconocido")) for c in campos_mup]
-                etiquetas = [c.split(':')[1] if ':' in c else c.split(':')[0] for c in campos_mup]
-                info.append("\n".join(f"{etiquetas[i]}: {valores[i]}" for i in range(len(campos_mup))))
-            return f"Dentro de {nombre_afeccion}:\n" + "\n\n".join(info)
+                partes = []
+                for campo in campos_mup:
+                    key, label = campo.split(":")
+                    valor = row.get(key, "Desconocido")
+                    if pd.notna(valor):
+                        partes.append(f"{label}: {valor}")
+                texto = f"Afección a {nombre_afeccion} → " + " | ".join(partes)
+                resultados.append(texto)
 
-        # --- MODO NORMAL: solo nombres ---
-        else:
-            nombres = ', '.join(seleccion[campo_nombre].dropna().unique())
-            return f"Dentro de {nombre_afeccion}: {nombres}"
+        # === MODO NORMAL: solo nombre ===
+        elif campo_nombre and campo_nombre in seleccion.columns:
+            nombres = seleccion[campo_nombre].dropna().unique()
+            for nombre in nombres:
+                resultados.append(f"Afección a {nombre_afeccion}: {nombre}")
+
+        return resultados
 
     except Exception as e:
-        return f"Indeterminado: {nombre_afeccion} (error de datos: {str(e)})"
+        # st.warning(f"Error en {nombre_afeccion}: {str(e)}")  # opcional: descomenta si quieres ver errores
+        return []
 
 # Función para crear el mapa con afecciones específicas
 def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
