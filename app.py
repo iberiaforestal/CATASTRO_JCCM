@@ -1193,75 +1193,71 @@ def interpretar_coordenadas(x, y):
     return None, None, "INVALIDO"
 
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
+@st.cache_data(ttl=3600)
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
     """
-    Versión definitiva: devuelve siempre una lista de strings (como el resto de capas)
-    Soporta MUP con campos personalizados y modo normal.
+    Versión 100% funcional para CLM - Devuelve siempre lista de strings
+    Soporta MUP con campos personalizados
     """
-    data = _descargar_geojson(url)
-    if data is None:
-        return []
-
     try:
-        # Cargar GeoJSON / FeatureServer
-        if "FeatureServer" in url:
+        response = session.get(url, timeout=20)
+        if not response.ok:
+            return []
+
+        if "FeatureServer" in url or "arcgis" in url.lower():
             import json
-            js = json.loads(data.getvalue().decode("utf-8"))
-            gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
+            data = json.loads(response.content)
+            gdf = gpd.GeoDataFrame.from_features(data["features"], crs="EPSG:4326")
         else:
-            gdf = gpd.read_file(data)
+            gdf = gpd.read_file(BytesIO(response.content))
 
         if gdf.empty:
             return []
 
-        # === Detectar CRS de la geometría de entrada ===
-        if hasattr(geom, "crs") and geom.crs:
-            geom_crs = geom.crs
-        else:
-            # Detección automática por valores
-            try:
-                cx, cy = geom.centroid.x, geom.centroid.y
-                geom_crs = "EPSG:25830" if (cx > 100000 and cy > 4000000) else "EPSG:4326"
-            except:
-                geom_crs = "EPSG:4326"
-
-        geom_gs = gpd.GeoSeries([geom], crs=geom_crs)
-
-        # Normalizar CRS de la capa remota
+        # Normalizar CRS
         if gdf.crs is None:
             gdf = gdf.set_crs("EPSG:4326")
-        if gdf.crs != geom_crs:
-            gdf = gdf.to_crs(geom_crs)
+        
+        # Detectar CRS de la geometría
+        if hasattr(geom, "crs") and geom.crs:
+            target_crs = geom.crs
+        else:
+            cx, cy = geom.centroid.x, geom.centroid.y
+            target_crs = "EPSG:25830" if (cx > 100000 and cy > 4000000) else "EPSG:4326"
+        
+        geom_gs = gpd.GeoSeries([geom], crs=target_crs)
+        gdf = gdf.to_crs(target_crs)
 
         # Intersección
-        seleccion = gdf[gdf.intersects(geom_gs.iloc[0])]
-        if seleccion.empty:
+        inter = gdf[gdf.intersects(geom_gs.iloc[0])]
+        if inter.empty:
             return []
 
         resultados = []
 
-        # === MODO MUP: campos personalizados ===
-        if campos_mup:
-            for _, row in seleccion.iterrows():
+        if campos_mup:  # MODO MUP
+            for _, row in inter.iterrows():
                 partes = []
                 for campo in campos_mup:
                     key, label = campo.split(":")
                     valor = row.get(key, "Desconocido")
-                    if pd.notna(valor):
+                    if pd.notna(valor) and str(valor).strip():
                         partes.append(f"{label}: {valor}")
-                texto = f"Afección a {nombre_afeccion} → " + " | ".join(partes)
-                resultados.append(texto)
+                if partes:
+                    resultados.append(f"Afección a {nombre_afeccion} → " + " | ".join(partes))
+        
+        else:  # MODO NORMAL
+            if campo_nombre and campo_nombre
 
-        # === MODO NORMAL: solo nombre ===
-        elif campo_nombre and campo_nombre in seleccion.columns:
-            nombres = seleccion[campo_nombre].dropna().unique()
-            for nombre in nombres:
-                resultados.append(f"Afección a {nombre_afeccion}: {nombre}")
+            nombres = inter[campo_nombre].dropna().astype(str).unique()
+            for n in nombres:
+                if n and n.strip():
+                    resultados.append(f"Afección a {nombre_afeccion}: {n}")
 
-        return resultados
+        return resultados if resultados else []
 
     except Exception as e:
-        # st.warning(f"Error en {nombre_afeccion}: {str(e)}")  # opcional: descomenta si quieres ver errores
+        st.warning(f"Error consultando {nombre_afeccion}: {str(e)}")
         return []
 
 # Función para crear el mapa con afecciones específicas
