@@ -1258,8 +1258,7 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
         return resultados
 
     except Exception as e:
-        # Comenta la línea de abajo si no quieres ver errores en producción
-        st.warning(f"Error consultando {nombre_afeccion}: {str(e)}")
+        st.warning(f"Error consultando {nombre_afeccion}: {str(e)}")  # Muestra el error en Streamlit para depuración
         return []
 
 # Función para crear el mapa con afecciones específicas
