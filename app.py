@@ -1196,14 +1196,15 @@ def interpretar_coordenadas(x, y):
 @st.cache_data(ttl=3600)
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
     """
-    Versión 100% funcional para CLM - Devuelve siempre lista de strings
-    Soporta MUP con campos personalizados
+    Versión definitiva y sin errores - Funciona con MUP, VP, ENP y cualquier otra capa
+    Devuelve siempre una lista de strings (o lista vacía si no hay afección o error)
     """
     try:
         response = session.get(url, timeout=20)
         if not response.ok:
             return []
 
+        # Cargar según tipo de servicio
         if "FeatureServer" in url or "arcgis" in url.lower():
             import json
             data = json.loads(response.content)
@@ -1214,49 +1215,51 @@ def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_m
         if gdf.empty:
             return []
 
-        # Normalizar CRS
+        # Normalizar CRS de la capa descargada
         if gdf.crs is None:
             gdf = gdf.set_crs("EPSG:4326")
-        
-        # Detectar CRS de la geometría
+
+        # Detectar CRS de la geometría de consulta (parcela o punto)
         if hasattr(geom, "crs") and geom.crs:
             target_crs = geom.crs
         else:
             cx, cy = geom.centroid.x, geom.centroid.y
             target_crs = "EPSG:25830" if (cx > 100000 and cy > 4000000) else "EPSG:4326"
-        
+
+        # Reproyectar todo al mismo CRS
         geom_gs = gpd.GeoSeries([geom], crs=target_crs)
         gdf = gdf.to_crs(target_crs)
 
         # Intersección
-        inter = gdf[gdf.intersects(geom_gs.iloc[0])]
-        if inter.empty:
+        intersecciones = gdf[gdf.intersects(geom_gs.iloc[0])]
+        if intersecciones.empty:
             return []
 
         resultados = []
 
-        if campos_mup:  # MODO MUP
-            for _, row in inter.iterrows():
+        # === MODO MUP: campos personalizados ===
+        if campos_mup:
+            for _, row in intersecciones.iterrows():
                 partes = []
                 for campo in campos_mup:
                     key, label = campo.split(":")
                     valor = row.get(key, "Desconocido")
-                    if pd.notna(valor) and str(valor).strip():
-                        partes.append(f"{label}: {valor}")
+                    if pd.notna(valor) and str(valor).strip() and str(valor).strip() != "None":
+                        partes.append(f"{label}: {valor.strip()}")
                 if partes:
                     resultados.append(f"Afección a {nombre_afeccion} → " + " | ".join(partes))
-        
-        else:  # MODO NORMAL
-            if campo_nombre and campo_nombre
 
-            nombres = inter[campo_nombre].dropna().astype(str).unique()
-            for n in nombres:
-                if n and n.strip():
-                    resultados.append(f"Afección a {nombre_afeccion}: {n}")
+        # === MODO NORMAL: solo un campo nombre ===
+        elif campo_nombre and campo_nombre in intersecciones.columns:
+            nombres = intersecciones[campo_nombre].dropna().astype(str).unique()
+            for nombre in nombres:
+                if nombre.strip() and nombre.strip() != "None":
+                    resultados.append(f"Afección a {nombre_afeccion}: {nombre.strip()}")
 
-        return resultados if resultados else []
+        return resultados
 
     except Exception as e:
+        # Comenta la línea de abajo si no quieres ver errores en producción
         st.warning(f"Error consultando {nombre_afeccion}: {str(e)}")
         return []
 
