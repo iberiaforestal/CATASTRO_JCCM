@@ -1073,7 +1073,6 @@ def transformar_coordenadas(x, y):
 
 # Función para consultar si la geometría intersecta con algún polígono del GeoJSON
 # === FUNCIÓN DESCARGA CON CACHÉ ===
-@st.cache_data(show_spinner=False, ttl=604800)  # 7 días
 def _descargar_geojson(url):
     try:
         response = session.get(url, timeout=30)
@@ -1082,7 +1081,7 @@ def _descargar_geojson(url):
     except Exception as e:
         if not hasattr(st, "_wfs_warnings"):
             st._wfs_warnings = set()
-        warning_key = url.split('/')[-1]
+        warning_key = url.split('/')[-1].split('?')[0]
         if warning_key not in st._wfs_warnings:
             st.warning(f"Servicio no disponible: {warning_key}")
             st._wfs_warnings.add(warning_key)
@@ -1195,72 +1194,65 @@ def interpretar_coordenadas(x, y):
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
     """
-    Versión definitiva y sin errores - Funciona con MUP, VP, ENP y cualquier otra capa
-    Devuelve siempre una lista de strings (o lista vacía si no hay afección o error)
+    Funciona con MUP, VP, ENP y cualquier capa.
+    Devuelve lista de strings o lista vacía.
+    SIN CACHÉ → evita el error de geometría no hasheable.
     """
     try:
-        response = session.get(url, timeout=20)
-        if not response.ok:
+        # Descargar (usa tu función cacheada de _descargar_geojson → ya no tiene @cache_data)
+        data = _descargar_geojson(url)
+        if data is None:
             return []
 
-        # Cargar según tipo de servicio
+        # Cargar capa
         if "FeatureServer" in url or "arcgis" in url.lower():
             import json
-            data = json.loads(response.content)
-            gdf = gpd.GeoDataFrame.from_features(data["features"], crs="EPSG:4326")
+            js = json.loads(data.getvalue())
+            gdf = gpd.GeoDataFrame.from_features(js["features"], crs="EPSG:4326")
         else:
-            gdf = gpd.read_file(BytesIO(response.content))
+            gdf = gpd.read_file(data)
 
         if gdf.empty:
             return []
 
-        # Normalizar CRS de la capa descargada
-        if gdf.crs is None:
-            gdf = gdf.set_crs("EPSG:4326")
-
-        # Detectar CRS de la geometría de consulta (parcela o punto)
+        # CRS de la geometría de consulta
         if hasattr(geom, "crs") and geom.crs:
             target_crs = geom.crs
         else:
             cx, cy = geom.centroid.x, geom.centroid.y
             target_crs = "EPSG:25830" if (cx > 100000 and cy > 4000000) else "EPSG:4326"
 
-        # Reproyectar todo al mismo CRS
         geom_gs = gpd.GeoSeries([geom], crs=target_crs)
         gdf = gdf.to_crs(target_crs)
 
-        # Intersección
-        intersecciones = gdf[gdf.intersects(geom_gs.iloc[0])]
-        if intersecciones.empty:
+        inter = gdf[gdf.intersects(geom_gs.iloc[0])]
+        if inter.empty:
             return []
 
         resultados = []
 
-        # === MODO MUP: campos personalizados ===
-        if campos_mup:
-            for _, row in intersecciones.iterrows():
+        if campos_mup:  # MODO MUP
+            for _, row in inter.iterrows():
                 partes = []
                 for campo in campos_mup:
                     key, label = campo.split(":")
-                    valor = row.get(key, "Desconocido")
-                    if pd.notna(valor) and str(valor).strip() and str(valor).strip() != "None":
-                        partes.append(f"{label}: {valor.strip()}")
+                    val = row.get(key, "Desconocido")
+                    if pd.notna(val) and str(val).strip():
+                        partes.append(f"{label}: {val}")
                 if partes:
                     resultados.append(f"Afección a {nombre_afeccion} → " + " | ".join(partes))
 
-        # === MODO NORMAL: solo un campo nombre ===
-        elif campo_nombre and campo_nombre in intersecciones.columns:
-            nombres = intersecciones[campo_nombre].dropna().astype(str).unique()
-            for nombre in nombres:
-                if nombre.strip() and nombre.strip() != "None":
-                    resultados.append(f"Afección a {nombre_afeccion}: {nombre.strip()}")
+        elif campo_nombre and campo_nombre in inter.columns:
+            nombres = inter[campo_nombre].dropna().astype(str).unique()
+            for n in nombres:
+                if n.strip():
+                    resultados.append(f"Afección a {nombre_afeccion}: {n}")
 
         return resultados
 
     except Exception as e:
-        st.warning(f"Error consultando {nombre_afeccion}: {str(e)}")  # Muestra el error en Streamlit para depuración
+        st.warning(f"Error en {nombre_afeccion}: {e}")
         return []
-
 # Función para crear el mapa con afecciones específicas
 def crear_mapa(lon, lat, afecciones=[], parcela_gdf=None):
     if lon is None or lat is None:
