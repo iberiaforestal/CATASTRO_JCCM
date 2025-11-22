@@ -1193,7 +1193,6 @@ def interpretar_coordenadas(x, y):
     return None, None, "INVALIDO"
 
 # === FUNCIÓN PRINCIPAL (SIN CACHÉ EN GEOMETRÍA) ===
-@st.cache_data(ttl=3600)
 def consultar_wfs_seguro(geom, url, nombre_afeccion, campo_nombre=None, campos_mup=None):
     """
     Versión definitiva y sin errores - Funciona con MUP, VP, ENP y cualquier otra capa
