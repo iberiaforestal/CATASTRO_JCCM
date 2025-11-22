@@ -1686,29 +1686,35 @@ def generar_pdf(datos, x, y, filename):
     flora_key = "Afección PLAN RECUPERACION FLORA"
         
 # === PROCESAR TODAS LAS CAPAS (VP, ZEPA, LIC, ENP) ===
-    def procesar_capa(url, key, valor_inicial, campos, detectado_list):
-        valor = datos.get(key, "").strip()
-        if valor and not valor.startswith("No afecta") and not valor.startswith("Error"):
-            try:
-                data = _descargar_geojson(url)
-                if data is None:
-                    return "Error al consultar"
-                gdf = cargar_capa_geometrica(url, query_geom)
-                seleccion = gdf[gdf.intersects(query_geom)]
-                if not seleccion.empty:
-                    for _, props in seleccion.iterrows():
-                        fila = tuple(props.get(campo, "N/A") for campo in campos)
-                        detectado_list.append(fila)
-                    return ""
-                return valor_inicial
-            except Exception as e:
-                st.error(f"Error al procesar {key}: {e}")
+def procesar_capa(url, key, valor_inicial, campos, detectado_list, query_geom, datos):
+    valor = datos.get(key, "").strip()
+
+    if valor and not valor.startswith("No afecta") and not valor.startswith("Error"):
+        try:
+            data = _descargar_geojson(url)
+            if data is None:
                 return "Error al consultar"
-        return valor_inicial if not detectado_list else ""
+
+            gdf = cargar_capa_geometrica(url, query_geom)
+            seleccion = gdf[gdf.intersects(query_geom)]
+
+            if not seleccion.empty:
+                for _, props in seleccion.iterrows():
+                    fila = tuple(props.get(campo, "N/A") for campo in campos)
+                    detectado_list.append(fila)
+                return ""
+
+            return valor_inicial
+
+        except Exception as e:
+            st.error(f"Error al procesar {key}: {e}")
+            return "Error al consultar"
+
+    return valor_inicial if not detectado_list else ""
 
     # === VP ===
     vp_detectado = []
-    procesar_capa_multiple(
+    vp_valor = procesar_capa(
         vp_url,
         "afección VP",
         "No afecta a ninguna Vía Pecuaria",
@@ -1720,7 +1726,7 @@ def generar_pdf(datos, x, y, filename):
 
     # === MUP (ya funciona bien, lo dejamos igual) ===
     mup_detectado = []
-    procesar_capa_multiple(
+    mup_valor = procesar_procesar_capa(
         mup_url,
         "afección MUP",
         "No afecta a ningun Monte de Utilidad Pública",
