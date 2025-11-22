@@ -1687,30 +1687,57 @@ def generar_pdf(datos, x, y, filename):
         
 # === PROCESAR TODAS LAS CAPAS (VP, ZEPA, LIC, ENP) ===
 def procesar_capa(url, key, valor_inicial, campos, detectado_list, query_geom, datos):
+    # Valor ligero de la comprobación previa
     valor = datos.get(key, "").strip()
 
-    if valor and not valor.startswith("No afecta") and not valor.startswith("Error"):
-        try:
-            data = _descargar_geojson(url)
-            if data is None:
-                return "Error al consultar"
+    # Si ya sabemos que no afecta, devolvemos el valor inicial
+    if valor.startswith("No afecta") or valor.startswith("Error"):
+        return valor_inicial
 
-            gdf = cargar_capa_geometrica(url, query_geom)
-            seleccion = gdf[gdf.intersects(query_geom)]
-
-            if not seleccion.empty:
-                for _, props in seleccion.iterrows():
-                    fila = tuple(props.get(campo, "N/A") for campo in campos)
-                    detectado_list.append(fila)
-                return ""
-
-            return valor_inicial
-
-        except Exception as e:
-            st.error(f"Error al procesar {key}: {e}")
+    try:
+        # Descargar usando caché
+        data = _descargar_geojson(url)
+        if data is None:
             return "Error al consultar"
 
-    return valor_inicial if not detectado_list else ""
+        # Cargar capa usando SOLO el archivo cacheado
+        gdf = gpd.read_file(data)
+
+        # Asegurar CRS de la capa
+        if gdf.crs is None:
+            gdf = gdf.set_crs("EPSG:4326", allow_override=True)
+
+        # Asegurar CRS de la geometría
+        if hasattr(query_geom, "crs") and query_geom.crs:
+            geom_gs = gpd.GeoSeries([query_geom], crs=query_geom.crs)
+        else:
+            cx, cy = query_geom.centroid.x, query_geom.centroid.y
+            if cx > 100000 and cy > 4000000:
+                geom_gs = gpd.GeoSeries([query_geom], crs="EPSG:25830")
+            else:
+                geom_gs = gpd.GeoSeries([query_geom], crs="EPSG:4326")
+
+        # Reproyectar capa al CRS de la geometría
+        if gdf.crs != geom_gs.crs:
+            gdf = gdf.to_crs(geom_gs.crs)
+
+        # Intersección real
+        seleccion = gdf[gdf.intersects(geom_gs.iloc[0])]
+
+        if seleccion.empty:
+            return valor_inicial
+
+        # Rellenar tabla detectada
+        for _, row in seleccion.iterrows():
+            detectado_list.append(
+                tuple(row.get(campo, "N/A") for campo in campos)
+            )
+
+        return ""  # Se detectó algo
+
+    except Exception as e:
+        st.error(f"Error al procesar {key}: {e}")
+        return "Error al consultar"
 
     # === VP ===
     vp_detectado = []
@@ -1723,7 +1750,6 @@ def procesar_capa(url, key, valor_inicial, campos, detectado_list, query_geom, d
         query_geom,
         datos
     )
-
     # === MUP (ya funciona bien, lo dejamos igual) ===
     mup_detectado = []
     mup_valor = procesar_procesar_capa(
